@@ -47,6 +47,7 @@ The core research question is deliberately modest: *does adding structured geopo
 geopolitical-stock-predictor/
 ├── README.md
 ├── PROJECT_DESCRIPTION.md  # Full original specification
+├── AGENTS.md               # Instructions for coding agents (read this first)
 ├── .gitignore
 ├── requirements.txt
 ├── configs/
@@ -93,6 +94,8 @@ Full detail, checklists, and the running change log live in **[docs/ROADMAP.md](
 
 ## Getting started
 
+Requires **Python 3.11+** (developed on 3.13; no dependency is pinned yet).
+
 ```bash
 # 1. Clone and enter the repository
 git clone <repo-url>
@@ -110,11 +113,15 @@ Concrete commands for running each stage will be added to this README as those s
 
 ## Testing
 
+**Current state:** there is no test suite yet — the repository contains documentation only, and every Phase 1 checklist item is unchecked. Tests are added alongside the code they cover, starting with Phase 1 data ingestion.
+
 ```bash
 pytest
 ```
 
 The specification requires, at minimum: date/timezone parsing checks, duplicate detection, missing-data reporting, leakage guards on features and cutoffs, chronological split verification, simulator cash/position/cost correctness, and agreement between dashboard values and saved experiment results. Tests appear alongside the code they cover.
+
+The suite must run offline and deterministically — no test may download market or news data — and this section is kept in sync with it (how to run, how many tests, what they cover) as each phase lands.
 
 ## Limitations and responsible use
 
@@ -131,3 +138,4 @@ Treat every number this project produces as a model output for study — never a
 - [PROJECT_DESCRIPTION.md](PROJECT_DESCRIPTION.md) — full specification, schema, milestones, and risk register.
 - [docs/ROADMAP.md](docs/ROADMAP.md) — step-by-step progress and change log.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — target architecture: data flow, layers, design invariants, API surface.
+- [AGENTS.md](AGENTS.md) — operating rules for coding agents: doc-update duties, testing and data conventions, guardrails.

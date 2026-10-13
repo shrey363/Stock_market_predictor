@@ -4,6 +4,7 @@ Basic system architecture for the **Geopolitical Event-Aware Stock Market Predic
 
 - Specification: [PROJECT_DESCRIPTION.md](../PROJECT_DESCRIPTION.md)
 - Overview and setup: [README.md](../README.md)
+- Agent and process rules: [AGENTS.md](../AGENTS.md)
 
 ---
 
@@ -11,7 +12,7 @@ Basic system architecture for the **Geopolitical Event-Aware Stock Market Predic
 
 ```text
                         ┌──────────────────────────────────────────────────────────┐
-                        │                        DATA LAYER                       │
+                        │                        DATA LAYER                        │
                         │  data/raw  →  data/interim  →  data/processed            │
                         │  (CSV/JSON: market OHLCV, news articles, features)       │
                         └───────────────┬───────────────────────┬──────────────────┘
@@ -36,26 +37,26 @@ Basic system architecture for the **Geopolitical Event-Aware Stock Market Predic
                  │  + binary target (next-session return > 0)                  │
                  └──────────────┬───────────────────────────────┬──────────────┘
                                 │                               │
-                 ┌──────────────▼──────────────┐    ┌───────────▼────────────────┐
-                 │   SUPERVISED MODELS         │    │   TRADING SIMULATOR        │
-                 │  train_baseline.py          │    │  simulator.py (deterministc)│
+                 ┌──────────────▼──────────────┐    ┌───────────▼─────────────────┐
+                 │   SUPERVISED MODELS         │    │   TRADING SIMULATOR         │
+                 │  train_baseline.py          │    │  simulator.py deterministic │
                  │   (naive + market-only)     │    │  gym_env.py (Gymnasium)     │
                  │  train_news_aware.py        │    │  train_rl.py (SB3 agent)    │
                  │  evaluate.py (chronological)│    │  benchmarks: buy&hold, rule │
-                 └──────────────┬──────────────┘    └───────────┬────────────────┘
+                 └──────────────┬──────────────┘    └───────────┬─────────────────┘
                                 │                               │
                                 │        metrics.json /         │
                                 │        results CSV/JSON       │
                  ┌──────────────▼───────────────────────────────▼──────────────┐
                  │                        API LAYER (Flask)                    │
-                 │   endpoints: /market, /news, /predictions, /models,        │
-                 │               /simulation, /methodology                    │
+                 │   endpoints: /market, /news, /predictions, /models,         │
+                 │               /simulation, /methodology                     │
                  └──────────────────────────────┬──────────────────────────────┘
                                                 │ JSON
                  ┌──────────────────────────────▼──────────────────────────────┐
                  │                  FRONTEND (React + Plotly)                  │
                  │  Market overview · News explorer · Prediction view ·        │
-                 │  Model comparison · Trading simulation · Limitations       │
+                 │  Model comparison · Trading simulation · Limitations        │
                  └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -124,3 +125,34 @@ The design is intentionally boring and grows per roadmap phase:
 - **Phase 7:** Flask API and React dashboard bolt *onto* existing artifacts; nothing is rewired.
 
 If a stage's tests are green, later stages can be built without reworking earlier ones. That independence is the main reason for the strict file-based contracts between layers.
+
+## 8. Invariant → test map
+
+Every rule in §3 has (or will have) an explicit, offline test — a comment is not enforcement. This table is the contract between the design and the suite required by §15 of the specification.
+
+| Invariant (§3) | Test that enforces it | Lands in |
+|---|---|---|
+| Chronological splits | Train/validation/test date ranges are strictly ordered and disjoint; no shuffling anywhere in the path | Phase 3 |
+| Prediction cutoff | Adding/changing a news row published after the cutoff leaves that session's feature row unchanged | Phase 4 |
+| No silent fills | A session with no pre-cutoff articles gets all-zero counts **and** `no_news = 1` | Phase 4 |
+| Traceability | Every classified article still carries `article_id`, text, timestamp, and source | Phase 2 |
+| Simulator determinism | Replaying identical prices + costs + actions yields identical cash, positions, and portfolio value (hand-checked numeric fixtures) | Phase 5 |
+| RL information set | Mutating rows after step `t` does not change the observation at `t` | Phase 6 |
+| Artifact contract | Values returned by the API/dashboard equal the values in `reports/experiment_results/` | Phase 7 |
+
+Tests run offline and deterministically: no network, no wall-clock dependence, fixed seeds where randomness is involved. Raw data is cached under `data/raw/` (git-ignored) so ingestion can be tested from a local fixture.
+
+## 9. Module boundaries
+
+Dependencies point one way only, left to right:
+
+```text
+common  →  data  →  preprocessing  →  nlp / features  →  models / trading  →  backend  →  frontend
+```
+
+- `common/` (config, paths, logging, seeds) must not import any other project layer.
+- `nlp/` and `features/` may read `data/` and `preprocessing/` outputs, never `models/` or `trading/`.
+- `backend/` and `frontend/` read saved artifacts only; they never import training or simulation code and never trigger training inside a request.
+- Nothing outside `trading/` maintains portfolio state, and nothing outside `reports/` persists experiment numbers.
+
+Cross-layer imports that skip or reverse this order are a design bug even when the code runs — restructure or route through `common/` instead.

@@ -1,1 +1,16 @@
 .freebuff/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Secrets — never commit keys or tokens
+.env
+
+# Raw data is never committed (see AGENTS.md §8); regenerate from documented sources
+data/raw/
