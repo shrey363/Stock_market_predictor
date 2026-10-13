@@ -8,7 +8,7 @@ Living progress tracker for the **Geopolitical Event-Aware Stock Market Predicti
 - Setup and overview: [README.md](../README.md).
 - Target design: [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Overall status:** Phase 1 — Define and inspect data — **not started**. 0 tests exist: there is no Python code, no `tests/` directory, and `pytest` is not yet runnable. 5 Markdown files (docs only). Next up: choose the instrument(s) and the news dataset (Phase 1, items 1–2).
+**Overall status:** Phase 1 — Define and inspect data — **complete**. **73/73 tests passing** (`pytest` → `73 passed in 0.99s`). Working pipeline: `SPY` daily bars (1,259 sessions, 2018-01-02…2022-12-30) and the CC BY 4.0 Hugging Face news dataset filtered to `POLITICS` (5,930 articles, 2018-01-01…2022-09-19), with 10/10 data checks passing. Next up: Phase 2 — define the event taxonomy and label a small reviewed sample.
 
 ---
 
@@ -16,12 +16,18 @@ Living progress tracker for the **Geopolitical Event-Aware Stock Market Predicti
 
 **Goal:** documented, reproducible sample datasets.
 
-- [ ] Choose one market/index or a small set of stocks.
-- [ ] Select a small historical geopolitical-news dataset.
-- [ ] Record licences, data sources, columns, date coverage, and known limitations.
-- [ ] Inspect missing values, duplicates, timestamps, and class balance.
-- [ ] Load both datasets in Python and inspect rows, date ranges, missing values, duplicates.
-- [ ] Set up repository scaffolding: `.gitignore`, `requirements.txt`, `configs/config.example.yaml`, `data/` folders.
+**Status:** complete (2026-10-13). One instrument (`SPY`) and one news dataset
+(`heegyu/news-category-dataset`, CC BY 4.0, pinned revision); 1,259 market sessions and
+5,930 news articles validated, 10/10 checks passing. Full record:
+[docs/dataset_notes.md](dataset_notes.md) and
+[reports/experiment_results/phase1_data_report.json](../reports/experiment_results/phase1_data_report.json).
+
+- [x] Choose one market/index or a small set of stocks. — `SPY` (broad index proxy), daily bars, 2018-01-01…2022-12-31 requested.
+- [x] Select a small historical geopolitical-news dataset. — Hugging Face `heegyu/news-category-dataset` (CC BY 4.0, ungated, no API key), filtered to one publisher category.
+- [x] Record licences, data sources, columns, date coverage, and known limitations. — `docs/dataset_notes.md`, including the concluded Yahoo terms position and the CC BY 4.0 attribution text.
+- [x] Inspect missing values, duplicates, timestamps, and class balance. — all reported; target class balance is impossible before Phase 3 defines the target, and the report says so explicitly rather than showing an invented distribution.
+- [x] Load both datasets in Python and inspect rows, date ranges, missing values, duplicates. — `python -m stock_project.data.inspect_data` prints 10 pass/fail checks and writes the JSON report.
+- [x] Set up repository scaffolding: `.gitignore`, `requirements.txt`, `configs/config.example.yaml`, `data/` folders. — pinned dependencies, `pyproject.toml`, config example, data/report directories; raw and derived data are git-ignored and regenerable.
 
 ## Phase 2 — News classification and sentiment
 
@@ -109,6 +115,18 @@ Mirrors §19 of the specification — the project is complete when:
 Newest first. Every substantive action gets an entry: date, what changed, files touched, and verification.
 
 ### 2026-10-13
+
+- **Phase 1 implemented: datasets chosen, ingested, validated, and documented.** First code in the repository; all six Phase 1 checklist items are now ticked.
+  - **Scaffolding:** `requirements.txt` (pinned: pandas 3.0.6, numpy 2.5.4, scikit-learn 1.9.1, PyYAML 6.0.3, yfinance 1.7.0, pytest 9.1.1), `pyproject.toml` (package metadata + pytest `pythonpath = ["src"]`), `configs/config.example.yaml` (instrument, window, news dataset with licence/revision, cutoff, simulated-trading cost assumptions, seed), `data/` and `reports/` directories. `.gitignore` now excludes raw **and** derived datasets (both regenerable), while `data/manifest.json` stays committed.
+  - **Common layer:** `common/config.py` (strict YAML validation), `common/paths.py` (root-relative paths, test-friendly override), `common/quality.py` (`QualityReport`), `common/manifest.py` (provenance + SHA-256), `common/timeutils.py`, `common/errors.py`, `common/logging_utils.py`.
+  - **Ingestion:** `data/market_data.py` (injectable downloader, local cache, manifest entry), `data/news_data.py` (pinned-revision download plus streaming, deterministic JSONL subset filter), `data/fetch_data.py` (CLI).
+  - **Cleaning and inspection:** `preprocessing/clean_market_data.py`, `preprocessing/clean_news_data.py`, `data/inspect_data.py` (CLI, 10 checks, JSON artifact).
+  - **Data now cached:** market 1,259 sessions `2018-01-02`…`2022-12-30`; news 5,930 articles `2018-01-01`…`2022-09-19` from an 87,295,572-byte CC BY 4.0 snapshot pinned at revision `304a05a5…`; 887 calendar days shared by both tables. 0 duplicates and 0 unparsable timestamps in either table; no imputation anywhere.
+  - **Docs:** new `docs/dataset_notes.md` (source, licence conclusion, retrieval date, revision, SHA-256, columns, coverage, gaps, preprocessing, reproduction commands); README (status, structure tree, install/run, testing); ARCHITECTURE (§3 cutoff mechanism, §4 implemented column contracts, §8 test map, new §10 implementation status); AGENTS.md current-state line.
+  - **Tests:** 6 new modules plus `tests/conftest.py` and tiny synthetic fixtures under `tests/fixtures/`. Every test is offline: ingestion is exercised through an injected fake downloader, so no test performs a network request or depends on wall-clock time.
+- **Verified:** `pytest` → `73 passed in 0.99s` (exit 0). Real end-to-end run: `fetch_data` downloaded 87,295,572 bytes of news plus 1,259 market rows; `inspect_data` reported **all 10 checks passed** (exit 0), wrote `data/processed/` tables and `reports/experiment_results/phase1_data_report.json`; `data/manifest.json` holds 4 provenance entries with SHA-256 hashes.
+- **Honest gaps carried forward:** news timestamps are day-level (mitigated by `available_from = published_at + 1 day`), the source is general political news rather than a curated geopolitical corpus, the news window ends ~3 months before the market series, 134/5,930 articles have no author field, and target class balance cannot be inspected until Phase 3 defines the target.
+- **Not started:** every Phase 2–7 checklist item.
 
 - **Hardened the documentation set (agent-facing rules and cross-references).** Documentation only — no code, data, or config changed.
   - `AGENTS.md` — added: current repo state (docs-only, 0 tests), explicit precedence rules for when documents disagree, an environment/commands section, testing conventions (offline + deterministic, hand-checkable simulator fixtures, full-suite rule, never weaken an assertion to pass), data and licensing rules (no invented data, never commit `data/raw/`), a Definition of Done with a docs-only carve-out and an artifact-verification bullet, a “never do this” guardrail list, and a required end-of-task report format.

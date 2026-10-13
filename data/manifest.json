@@ -1,0 +1,135 @@
+{
+  "manifest_version": 1,
+  "updated_at_utc": "2026-10-13T18:04:33Z",
+  "datasets": {
+    "market:SPY:1d": {
+      "key": "market:SPY:1d",
+      "name": "SPY 1d OHLCV",
+      "file": "data/raw/market/SPY_1d_20180101_20221231.csv",
+      "sha256": "65e9d3d53feb0ca3c6cdb44cf25eca281d0f4ad36ebd85eb72147fbd3ad3eedb",
+      "size_bytes": 262928,
+      "retrieved_at_utc": "2026-10-13T17:59:37Z",
+      "source": "Yahoo Finance via yfinance (research/educational use; see docs/dataset_notes.md)",
+      "url": "https://finance.yahoo.com/quote/SPY",
+      "dataset_id": null,
+      "revision": null,
+      "license": null,
+      "license_url": null,
+      "rows": 1259,
+      "columns": [
+        "symbol",
+        "timestamp",
+        "open",
+        "high",
+        "low",
+        "close",
+        "adj_close",
+        "volume",
+        "source"
+      ],
+      "date_coverage": [
+        "2018-01-02",
+        "2022-12-30"
+      ],
+      "notes": [
+        "Bars are exchange sessions; the timestamp is a UTC date stamp, not an intraday instant.",
+        "Requested window (inclusive of provider availability): 2018-01-01..2022-12-31.",
+        "Adjacent sessions are not gap-filled; holidays simply have no row."
+      ]
+    },
+    "news:heegyu/news-category-dataset": {
+      "key": "news:heegyu/news-category-dataset",
+      "name": "heegyu/news-category-dataset (data.json)",
+      "file": "data/raw/news/news-category-dataset/data.json",
+      "sha256": "2cfc51fa4a82a96ecbe251fa383737aa1dea2e0a517f61dece633fcc25a4a065",
+      "size_bytes": 87295572,
+      "retrieved_at_utc": "2026-10-13T17:59:48Z",
+      "source": "https://huggingface.co/datasets/heegyu/news-category-dataset",
+      "url": "https://huggingface.co/datasets/heegyu/news-category-dataset/resolve/304a05a55bc6abc0446d8fae0d0771716b6a271a/data.json",
+      "dataset_id": "heegyu/news-category-dataset",
+      "revision": "304a05a55bc6abc0446d8fae0d0771716b6a271a",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "rows": null,
+      "columns": null,
+      "date_coverage": null,
+      "notes": [
+        "Raw download, stored unmodified; the subset used by the project is filtered in data/interim/.",
+        "JSON Lines: one JSON object per line."
+      ]
+    },
+    "processed:market:SPY:1d": {
+      "key": "processed:market:SPY:1d",
+      "name": "cleaned SPY 1d",
+      "file": "data/processed/market_SPY_1d_clean.csv",
+      "sha256": "ee158f83b683c440d89417b9af870c93a7eb1fec9ca9aebdb8d95ddc0bbcbd10",
+      "size_bytes": 262206,
+      "retrieved_at_utc": "2026-10-13T18:04:33Z",
+      "source": "Yahoo Finance via yfinance (research/educational use; see docs/dataset_notes.md)",
+      "url": null,
+      "dataset_id": null,
+      "revision": null,
+      "license": null,
+      "license_url": null,
+      "rows": 1259,
+      "columns": [
+        "symbol",
+        "timestamp",
+        "open",
+        "high",
+        "low",
+        "close",
+        "adj_close",
+        "volume",
+        "source"
+      ],
+      "date_coverage": [
+        "2018-01-02",
+        "2022-12-30"
+      ],
+      "notes": [
+        "Derived by preprocessing.clean_market_data from the raw file listed above.",
+        "0 duplicate row(s) removed; no imputation applied."
+      ]
+    },
+    "processed:news:heegyu/news-category-dataset": {
+      "key": "processed:news:heegyu/news-category-dataset",
+      "name": "cleaned news subset (POLITICS)",
+      "file": "data/processed/news_news-category-dataset_politics_clean.csv",
+      "sha256": "30bbcbb60a8cbfb6878a505861c659124d5f148de8cf9b46793f86c212b602d6",
+      "size_bytes": 2366198,
+      "retrieved_at_utc": "2026-10-13T18:04:33Z",
+      "source": "https://huggingface.co/datasets/heegyu/news-category-dataset",
+      "url": null,
+      "dataset_id": "heegyu/news-category-dataset",
+      "revision": "304a05a55bc6abc0446d8fae0d0771716b6a271a",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "rows": 5930,
+      "columns": [
+        "article_id",
+        "published_at",
+        "available_from",
+        "headline",
+        "article_text",
+        "source",
+        "source_url",
+        "source_category",
+        "authors",
+        "event_category",
+        "sentiment_label",
+        "sentiment_score",
+        "affected_sector"
+      ],
+      "date_coverage": [
+        "2018-01-01",
+        "2022-09-19"
+      ],
+      "notes": [
+        "Derived by preprocessing.clean_news_data from the interim subset listed above.",
+        "event_category/sentiment columns are unassigned until Phase 2.",
+        "licence CC BY 4.0 \u2014 attribution required (https://creativecommons.org/licenses/by/4.0/)."
+      ]
+    }
+  }
+}

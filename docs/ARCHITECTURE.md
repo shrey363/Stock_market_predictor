@@ -1,6 +1,6 @@
 # Architecture
 
-Basic system architecture for the **Geopolitical Event-Aware Stock Market Prediction and Trading** project. This describes the *target* design; components are implemented phase by phase per [ROADMAP.md](ROADMAP.md). No application code exists yet beyond documentation.
+Basic system architecture for the **Geopolitical Event-Aware Stock Market Prediction and Trading** project. This describes the *target* design; components are implemented phase by phase per [ROADMAP.md](ROADMAP.md). **Phase 1 is implemented** — ingestion, cleaning, and inspection live in `src/stock_project/` (§10 lists exactly what exists); every other layer below is still target design.
 
 - Specification: [PROJECT_DESCRIPTION.md](../PROJECT_DESCRIPTION.md)
 - Overview and setup: [README.md](../README.md)
@@ -79,7 +79,7 @@ Basic system architecture for the **Geopolitical Event-Aware Stock Market Predic
 These are architectural invariants, not suggestions — a component that breaks them is wrong regardless of its metrics.
 
 1. **Chronological everything.** Train/validation/test splits are time-ordered; no random shuffling of series. Fitted transformations are fit on training data only.
-2. **Prediction cutoff.** Every feature row is built from information available strictly before the session's prediction time. News published after the cutoff is excluded, not down-weighted.
+2. **Prediction cutoff.** Every feature row is built from information available strictly before the session's prediction time. News published after the cutoff is excluded, not down-weighted. Because the news source carries only a calendar date, the cleaned table exposes `available_from` (= publication date + 1 day) as the earliest instant an article may be used; features must read that column, never `published_at`.
 3. **No silent fills.** Missing news → zero counts *plus* a missing-news indicator. Never impute neutral sentiment for absence of data.
 4. **Traceability.** Every classified headline keeps its `article_id`, original text, timestamp, source, assigned category, and sentiment score so dashboard values can be traced to inputs.
 5. **Simulator determinism.** Given the same prices, costs, and actions, the simulator produces identical results; it is unit-tested with hand-checkable examples before RL touches it.
@@ -90,8 +90,9 @@ These are architectural invariants, not suggestions — a component that breaks 
 
 Full field lists are in §6 of the specification. Summary of the two core tables:
 
-- **Market table:** `symbol, date, open, high, low, close, adj_close, volume, source`
-- **News table:** `article_id, published_at, headline, article_text, source, event_category, sentiment_label, sentiment_score, affected_sector`
+- **Market table (cleaned, implemented):** `symbol, timestamp, open, high, low, close, adj_close, volume, source` — one row per exchange session, timestamp UTC, unique on `(symbol, timestamp)`, never gap-filled or imputed.
+- **News table (cleaned, implemented):** `article_id, published_at, available_from, headline, article_text, source, source_url, source_category, authors, event_category, sentiment_label, sentiment_score, affected_sector` — where `article_id` is derived (SHA-1 of `source_url|headline|date`), `source` is the publisher host derived from the URL, `source_category` is the *publisher's* label kept separate from our taxonomy, `available_from = published_at + 1 day`, and the four label columns stay missing until Phase 2.
+- **Filtered news subset (interim, implemented):** `link, headline, category, short_description, authors, date` — the source columns for one publisher category inside the configured window, before validation.
 - **Feature table (processed):** one row per (symbol, session) — lagged returns, MA/RSI/volatility, per-category article counts, mean sentiment, pos/neg/neutral counts, hours since last relevant article, `no_news` indicator, and the binary target.
 
 Storage stays CSV/JSON on disk until a real need arises; MongoDB is explicitly a later option, not a default dependency.
@@ -134,8 +135,9 @@ Every rule in §3 has (or will have) an explicit, offline test — a comment is 
 |---|---|---|
 | Chronological splits | Train/validation/test date ranges are strictly ordered and disjoint; no shuffling anywhere in the path | Phase 3 |
 | Prediction cutoff | Adding/changing a news row published after the cutoff leaves that session's feature row unchanged | Phase 4 |
-| No silent fills | A session with no pre-cutoff articles gets all-zero counts **and** `no_news = 1` | Phase 4 |
-| Traceability | Every classified article still carries `article_id`, text, timestamp, and source | Phase 2 |
+| No silent fills | Phase 1: per-column missing counts are reported, no value is imputed or forward-filled, and label columns stay empty. Phase 4: a session with no pre-cutoff articles gets all-zero counts **and** `no_news = 1` | Phase 1, completed in Phase 4 |
+| Day-level news timestamps | Every cleaned article has `available_from = published_at + 1 day`, so a same-day cutoff cannot leak post-cutoff news | Phase 1 (guard), consumed in Phase 4 |
+| Traceability | Every classified article still carries `article_id`, text, timestamp, and source (Phase 1 asserts this on the cleaned table; Phase 2 must assert it survives classification) | Phase 1, extended in Phase 2 |
 | Simulator determinism | Replaying identical prices + costs + actions yields identical cash, positions, and portfolio value (hand-checked numeric fixtures) | Phase 5 |
 | RL information set | Mutating rows after step `t` does not change the observation at `t` | Phase 6 |
 | Artifact contract | Values returned by the API/dashboard equal the values in `reports/experiment_results/` | Phase 7 |
@@ -156,3 +158,30 @@ common  →  data  →  preprocessing  →  nlp / features  →  models / tradin
 - Nothing outside `trading/` maintains portfolio state, and nothing outside `reports/` persists experiment numbers.
 
 Cross-layer imports that skip or reverse this order are a design bug even when the code runs — restructure or route through `common/` instead.
+
+## 10. Implementation status (Phase 1)
+
+Implemented and tested:
+
+| Module | Responsibility |
+|---|---|
+| `common/config.py` | Strict YAML config loading; rejects missing keys, inverted windows, non-UTC timezones, ambiguous dates, out-of-range numbers |
+| `common/paths.py` | Every data/report path derived from the repository root, with a test-friendly root override |
+| `common/quality.py` | `QualityReport` — missing counts/ratios, duplicates, coerced values, timezone assumptions, warnings |
+| `common/manifest.py` | Provenance manifest (`data/manifest.json`): source, licence, revision, retrieval time, rows, coverage, SHA-256 |
+| `common/timeutils.py` | UTC clock helpers |
+| `data/market_data.py` | Market fetch with an injectable downloader, local cache, and manifest entries |
+| `data/news_data.py` | Pinned-revision news download plus a streaming, deterministic JSONL subset filter |
+| `data/fetch_data.py` | CLI: fetch both datasets (the only step that needs network) |
+| `data/inspect_data.py` | CLI: clean, validate, write `data/processed/` and the Phase 1 JSON report |
+| `preprocessing/clean_market_data.py` | Strict ISO-8601 parsing, UTC normalisation, dedupe, ordering, sanity warnings, no imputation |
+| `preprocessing/clean_news_data.py` | Derived ids, day-precision `available_from` guard, dedupe, unassigned labels stay unassigned |
+
+Artifact contract: `reports/experiment_results/phase1_data_report.json` carries the config
+snapshot, per-table quality reports, coverage, ten explicit pass/fail checks, the columns still
+unassigned, and the known limitations. Paths inside every artifact are project-relative, so the
+report is diffable and portable. The backend/dashboard and later phases read this file — nothing
+re-derives numbers by hand.
+
+Not yet implemented (still target design): `nlp/`, `features/`, `models/`, `trading/`,
+`backend/`, `frontend/`, and the supervised/RL experiment artifacts.

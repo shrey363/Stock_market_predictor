@@ -1,0 +1,8 @@
+{"link": "https://www.example.com/a", "headline": "Headline A", "category": "POLITICS", "short_description": "Body A", "authors": "Author A", "date": "2020-01-02"}
+{"link": "https://www.example.com/b", "headline": "Headline B", "category": "POLITICS", "short_description": "Body B", "authors": "Author B", "date": "2020-01-05"}
+{"link": "https://www.example.com/x", "headline": "Business X", "category": "BUSINESS", "short_description": "Body X", "authors": "Author X", "date": "2020-01-05"}
+not json at all
+{"link": "https://www.example.com/n", "headline": "No date", "category": "POLITICS", "short_description": "Body N", "authors": "Author N", "date": ""}
+{"link": "https://www.example.com/y", "headline": "Too early", "category": "POLITICS", "short_description": "Body Y", "authors": "Author Y", "date": "2019-12-31"}
+{"link": "https://www.example.com/z", "headline": "Too late", "category": "POLITICS", "short_description": "Body Z", "authors": "Author Z", "date": "2020-01-10"}
+{"link": "https://www.example.com/b", "headline": "Headline B", "category": "POLITICS", "short_description": "Body B", "authors": "Author B", "date": "2020-01-05"}

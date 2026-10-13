@@ -16,7 +16,7 @@ Core research question: *does adding structured geopolitical-news features impro
 
 > **Simulation only. No live or real-money trading, ever. No financial advice. Never claim reliable prediction or profit.**
 
-**Current state:** documentation only — `README.md`, `PROJECT_DESCRIPTION.md`, `AGENTS.md`, `docs/ROADMAP.md`, `docs/ARCHITECTURE.md`. There is **no Python code, no `requirements.txt`, no `tests/`, and no test suite yet**; all six Phase 1 items are unchecked. Do not describe the project as tested or working. Refresh this line whenever the state changes.
+**Current state:** Phase 1 complete. Ingestion, cleaning, and inspection exist in `src/stock_project/` with a pinned `requirements.txt`, and there is an **offline test suite: 73 tests, all passing** (`pytest` → `73 passed`). Cached data: 1,259 SPY sessions and 5,930 news articles; the Phase 1 artifact is `reports/experiment_results/phase1_data_report.json` and the dataset record is `docs/dataset_notes.md`. Phases 2–7 are **not started** — there is no classifier, no prediction model, no simulator, and no dashboard. Do not describe those as existing. Refresh this line whenever the state changes.
 
 ## 2. Source-of-truth documents (read before acting)
 
@@ -82,17 +82,24 @@ Event taxonomy: `armed_conflict` · `trade_restriction` · `sanctions` · `diplo
 
 ## 6. Environment and commands
 
-Python 3.11+ is assumed (3.13 is installed on the current dev machine). Nothing is installed or pinned yet.
+Python 3.11+ is assumed; the pinned versions in `requirements.txt` are verified on 3.13.
 
 ```bash
-# once Phase 1 lands: environment + dependencies
+# environment + dependencies
 python -m venv .venv
 source .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+pip install -e .              # or set PYTHONPATH=src for `python -m stock_project...`
 
-# tests (once a suite exists)
+# tests (offline, fast; run before claiming anything works)
 pytest -q
+
+# Phase 1 pipeline
+python -m stock_project.data.fetch_data   --config configs/config.example.yaml   # network; caches to data/raw + data/interim
+python -m stock_project.data.inspect_data --config configs/config.example.yaml   # offline; writes data/processed + the JSON report
 ```
+
+Both CLIs accept `--root <path>` so they can run against a scratch directory instead of the repository.
 
 - Prefer `python -m pytest` style invocation only if the plain `pytest` on PATH is the wrong interpreter; otherwise keep commands exactly as documented in `README.md`.
 - Network access is a **soft** dependency: `yfinance` needs it for ingestion, but tests and normal verification must not. Cache raw downloads under `data/raw/` (git-ignored) and never let a test fail because the network is down.

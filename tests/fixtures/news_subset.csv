@@ -1,0 +1,7 @@
+link,headline,category,short_description,authors,date
+https://www.example.com/a,Headline A,POLITICS,Body A,Author A,2020-01-02
+https://www.example.com/b,Headline B,POLITICS,Body B,Author B,2020-01-05
+https://www.example.com/b,Headline B,POLITICS,Body B,Author B,2020-01-05
+https://www.example.com/c,Headline B,POLITICS,Body C,Author C,2020-01-05
+https://www.example.com/d,,POLITICS,Body D,Author D,2020-01-06
+https://www.example.com/e,Headline E,POLITICS,Body E,Author E,not-a-date
