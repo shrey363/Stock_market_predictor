@@ -1,7 +1,7 @@
 # Geopolitical Event-Aware Stock Market Prediction and Trading
 
 > **AI/ML Mini Project · FinTech · Team of 2**
-> **Status:** In development — see [ROADMAP.md](ROADMAP.md) for live progress.
+> **Status:** In development — see [docs/ROADMAP.md](docs/ROADMAP.md) for live progress and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the target design.
 > **Disclaimer:** This is a research and *simulated* trading prototype. It does not provide financial advice, does not execute real trades, and makes no claim of reliable price prediction.
 
 ## Overview
@@ -46,7 +46,6 @@ The core research question is deliberately modest: *does adding structured geopo
 ```text
 geopolitical-stock-predictor/
 ├── README.md
-├── ROADMAP.md              # Live progress log — updated with every change
 ├── PROJECT_DESCRIPTION.md  # Full original specification
 ├── .gitignore
 ├── requirements.txt
@@ -69,14 +68,18 @@ geopolitical-stock-predictor/
 ├── frontend/               # React dashboard
 ├── tests/                  # Data, feature, and simulator tests
 ├── reports/                # Figures and experiment results
-└── docs/                   # Dataset notes, model evaluation
+└── docs/
+    ├── ARCHITECTURE.md     # Target system design (data flow, layers, invariants)
+    ├── ROADMAP.md          # Live progress log — updated with every change
+    ├── dataset_notes.md    # (planned)
+    └── model_evaluation.md # (planned)
 ```
 
 *(Most of this structure does not exist yet — it is the target layout, created lazily as stages need it.)*
 
 ## Development phases
 
-Full detail, checklists, and the running change log live in **[ROADMAP.md](ROADMAP.md)**.
+Full detail, checklists, and the running change log live in **[docs/ROADMAP.md](docs/ROADMAP.md)**; the target system design lives in **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 
 | Phase | Goal | Deliverable |
 |---|---|---|
@@ -126,4 +129,5 @@ Treat every number this project produces as a model output for study — never a
 ## References
 
 - [PROJECT_DESCRIPTION.md](PROJECT_DESCRIPTION.md) — full specification, schema, milestones, and risk register.
-- [ROADMAP.md](ROADMAP.md) — step-by-step progress and change log.
+- [docs/ROADMAP.md](docs/ROADMAP.md) — step-by-step progress and change log.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — target architecture: data flow, layers, design invariants, API surface.

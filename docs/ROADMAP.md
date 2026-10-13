@@ -4,8 +4,9 @@ Living progress tracker for the **Geopolitical Event-Aware Stock Market Predicti
 
 - **Convention:** every phase has a checklist. A box is ticked only when the work is done *and* verified.
 - **Change log rule:** every meaningful action taken on this project gets an entry under [Change Log](#change-log) — newest first. Nothing counts as done until it is logged here.
-- Full requirements, schemas, and risk register: [PROJECT_DESCRIPTION.md](PROJECT_DESCRIPTION.md).
-- Setup and overview: [README.md](README.md).
+- Full requirements, schemas, and risk register: [PROJECT_DESCRIPTION.md](../PROJECT_DESCRIPTION.md).
+- Setup and overview: [README.md](../README.md).
+- Target design: [ARCHITECTURE.md](ARCHITECTURE.md).
 
 **Overall status:** Phase 1 — Define and inspect data (not started)
 
@@ -108,6 +109,11 @@ Mirrors §19 of the specification — the project is complete when:
 Newest first. Every substantive action gets an entry: date, what changed, files touched, and verification.
 
 ### 2026-10-13
+
+- **Added target architecture document.** Created `docs/ARCHITECTURE.md` — high-level data-flow diagram, layer/module responsibilities, architectural invariants (chronological splits, prediction cutoff, no silent fills, simulator determinism, RL information set, file-based experiment artifacts), data contracts, planned read-only Flask API surface, and per-phase evolution plan.
+- **Moved roadmap into `docs/`.** `ROADMAP.md` → `docs/ROADMAP.md` (git mv, rename recorded). Fixed relative links (`../PROJECT_DESCRIPTION.md`, `../README.md`) and added an architecture cross-reference; updated `README.md` to point at the new paths.
+- **Verified:** all cross-links from README and docs resolve to existing files; roadmap moved cleanly as a git rename with no content loss.
+- **Still not started:** any Phase 1 checklist item (no code or data yet).
 
 - **Initialized documentation.** Read `PROJECT_DESCRIPTION.md` and authored:
   - `README.md` — overview, principles, event taxonomy, tech stack, target repo structure, phase summary table, setup and testing instructions, limitations.
