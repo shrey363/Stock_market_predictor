@@ -1,0 +1,20 @@
+# Pinned dependencies for the Phase 1 data pipeline.
+# Verified together on Python 3.13 (Windows, CPython) with the test suite in tests/.
+# Install:  python -m venv .venv && .venv/Scripts/activate && pip install -r requirements.txt
+# Then:     pip install -e .   (makes `python -m stock_project...` importable from the repo)
+
+# Data handling
+pandas==3.0.6
+numpy==2.5.4
+
+# Configuration
+PyYAML==6.0.3
+
+# Market data (network needed only for the fetch step, never for tests)
+yfinance==1.7.0
+
+# Baseline ML (used from Phase 3 onward)
+scikit-learn==1.9.1
+
+# Testing
+pytest==9.1.1

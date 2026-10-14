@@ -1,7 +1,7 @@
 # Geopolitical Event-Aware Stock Market Prediction and Trading
 
 > **AI/ML Mini Project · FinTech · Team of 2**
-> **Status:** In development — see [docs/ROADMAP.md](docs/ROADMAP.md) for live progress and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the target design.
+> **Status:** Phase 1 (define and inspect data) complete — 73 tests passing. See [docs/ROADMAP.md](docs/ROADMAP.md) for live progress, [docs/dataset_notes.md](docs/dataset_notes.md) for the datasets actually used, and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design.
 > **Disclaimer:** This is a research and *simulated* trading prototype. It does not provide financial advice, does not execute real trades, and makes no claim of reliable price prediction.
 
 ## Overview
@@ -46,52 +46,60 @@ The core research question is deliberately modest: *does adding structured geopo
 ```text
 geopolitical-stock-predictor/
 ├── README.md
-├── PROJECT_DESCRIPTION.md  # Full original specification
+├── PROJECT_DESCRIPTION.md      # Full original specification
+├── AGENTS.md                   # Instructions for coding agents (read this first)
 ├── .gitignore
-├── requirements.txt
+├── requirements.txt            # Pinned dependencies (verified on Python 3.13)
+├── pyproject.toml              # Package metadata + pytest configuration
 ├── configs/
-│   └── config.example.yaml
+│   └── config.example.yaml     # Instrument, window, news dataset, provenance, seeds
 ├── data/
-│   ├── raw/                # Downloaded/original data; not committed
-│   ├── interim/            # Intermediate cleaned datasets
-│   └── processed/          # Features ready for experiments
-├── notebooks/              # Exploration and baseline experiments
+│   ├── manifest.json           # Committed provenance: source, licence, revision, SHA-256
+│   ├── raw/                    # Downloads, stored unmodified (git-ignored)
+│   ├── interim/                # Filtered news subset (git-ignored, regenerable)
+│   └── processed/              # Cleaned, validated tables (git-ignored, regenerable)
 ├── src/stock_project/
-│   ├── data/               # market_data.py, news_data.py
-│   ├── preprocessing/      # cleaning scripts
-│   ├── nlp/                # event_classifier.py, sentiment.py
-│   ├── features/           # technical_indicators.py, news_features.py
-│   ├── models/             # train_baseline.py, train_news_aware.py, evaluate.py
-│   ├── trading/            # simulator.py, gym_env.py, train_rl.py
-│   └── common/
-├── backend/app.py          # Flask API
-├── frontend/               # React dashboard
-├── tests/                  # Data, feature, and simulator tests
-├── reports/                # Figures and experiment results
+│   ├── common/                 # config.py, paths.py, quality.py, manifest.py, timeutils.py
+│   ├── data/                   # market_data.py, news_data.py, fetch_data.py, inspect_data.py
+│   ├── preprocessing/          # clean_market_data.py, clean_news_data.py
+│   ├── nlp/                    # (planned, Phase 2) event_classifier.py, sentiment.py
+│   ├── features/               # (planned, Phase 3) technical_indicators.py, news_features.py
+│   ├── models/                 # (planned, Phase 3-4) train_baseline.py, train_news_aware.py
+│   └── trading/                # (planned, Phase 5-6) simulator.py, gym_env.py, train_rl.py
+├── tests/
+│   ├── conftest.py             # Offline fixtures (synthetic, hand-checkable)
+│   ├── fixtures/               # Tiny CSV/JSONL fixtures used by the tests
+│   └── test_*.py               # 6 modules covering config, ingestion, cleaning, inspection
+├── reports/
+│   ├── experiment_results/     # phase1_data_report.json and later experiment artifacts
+│   └── figures/
 └── docs/
-    ├── ARCHITECTURE.md     # Target system design (data flow, layers, invariants)
-    ├── ROADMAP.md          # Live progress log — updated with every change
-    ├── dataset_notes.md    # (planned)
-    └── model_evaluation.md # (planned)
+    ├── ARCHITECTURE.md         # System design: data flow, layers, invariants, contracts
+    ├── ROADMAP.md              # Live progress log — updated with every change
+    ├── dataset_notes.md        # Dataset provenance, licences, coverage, gaps (Phase 1)
+    └── model_evaluation.md     # (planned, Phase 3+)
 ```
 
-*(Most of this structure does not exist yet — it is the target layout, created lazily as stages need it.)*
+*(Phase 1 created the parts shown without a `(planned…)` marker. `notebooks/`, `backend/`,
+and `frontend/` arrive in later phases, as does the rest of `src/stock_project/`.)*
 
 ## Development phases
 
 Full detail, checklists, and the running change log live in **[docs/ROADMAP.md](docs/ROADMAP.md)**; the target system design lives in **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 
-| Phase | Goal | Deliverable |
-|---|---|---|
-| 1 | Define and inspect data | Documented, reproducible sample datasets |
-| 2 | News classification and sentiment | News dataset with traceable category/sentiment outputs |
-| 3 | Market features and baseline prediction | Reproducible baseline metrics |
-| 4 | Add geopolitical features | Fair market-only vs market+news comparison |
-| 5 | Trading simulator | Tested historical simulator |
-| 6 | Reinforcement learning | RL evaluation report with metrics and limitations |
-| 7 | Dashboard and final integration | Working demo and final report |
+| Phase | Goal | Deliverable | Status |
+|---|---|---|---|
+| 1 | Define and inspect data | Documented, reproducible sample datasets | **Done** — see [docs/dataset_notes.md](docs/dataset_notes.md) |
+| 2 | News classification and sentiment | News dataset with traceable category/sentiment outputs | Next |
+| 3 | Market features and baseline prediction | Reproducible baseline metrics | Planned |
+| 4 | Add geopolitical features | Fair market-only vs market+news comparison | Planned |
+| 5 | Trading simulator | Tested historical simulator | Planned |
+| 6 | Reinforcement learning | RL evaluation report with metrics and limitations | Planned |
+| 7 | Dashboard and final integration | Working demo and final report | Planned |
 
 ## Getting started
+
+Requires **Python 3.11+** (developed and verified on 3.13; every dependency is pinned in `requirements.txt`).
 
 ```bash
 # 1. Clone and enter the repository
@@ -102,19 +110,53 @@ cd geopolitical-stock-predictor
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 
-# 3. Install dependencies (created in Phase 1)
+# 3. Install dependencies and the package itself
 pip install -r requirements.txt
+pip install -e .                 # makes `python -m stock_project...` work; or set PYTHONPATH=src
 ```
 
-Concrete commands for running each stage will be added to this README as those stages land (tracked in the roadmap).
+### Running Phase 1 (done)
+
+```bash
+# Fetch the datasets and cache them under data/raw/ + data/interim/ (needs network, ~84 MB)
+python -m stock_project.data.fetch_data --config configs/config.example.yaml
+
+# Clean, validate, and write the Phase 1 report (offline; reads the cache)
+python -m stock_project.data.inspect_data --config configs/config.example.yaml
+```
+
+`fetch_data` prints the cached file paths and records source/licence/revision/SHA-256 in
+`data/manifest.json`. `inspect_data` prints ten pass/fail checks, writes the cleaned tables to
+`data/processed/`, and writes [`reports/experiment_results/phase1_data_report.json`](reports/experiment_results/phase1_data_report.json).
+Raw and derived datasets are git-ignored because they are fully regenerable with those two
+commands; the manifest and the report are committed.
+
+Concrete commands for later stages will be added here as those stages land (tracked in the roadmap).
 
 ## Testing
 
+**Current state:** 73 tests, all passing (`73 passed` via `pytest`), covering configuration
+validation, market and news ingestion, cleaning/validation, and the Phase 1 inspection
+artifact. No test touches the network.
+
 ```bash
-pytest
+pytest          # or: pytest -q
 ```
 
 The specification requires, at minimum: date/timezone parsing checks, duplicate detection, missing-data reporting, leakage guards on features and cutoffs, chronological split verification, simulator cash/position/cost correctness, and agreement between dashboard values and saved experiment results. Tests appear alongside the code they cover.
+
+The suite must run offline and deterministically — no test may download market or news data — and this section is kept in sync with it (how to run, how many tests, what they cover) as each phase lands.
+
+What the current 73 tests cover:
+
+| Module | Coverage |
+|---|---|
+| `tests/test_config.py` | Config loading and strict validation (missing keys, inverted windows, non-UTC timezones, ambiguous dates, out-of-range numbers) |
+| `tests/test_market_data.py` | Market ingestion with an injected fake provider: column normalisation, cache reuse, provenance manifest, offline error paths |
+| `tests/test_news_data.py` | News download provenance, streaming JSONL filters, deterministic capping, round-trips through disk |
+| `tests/test_clean_market_data.py` | Timestamp/timezone normalisation, duplicate detection, chronological ordering, missing-value reporting, no-imputation guarantee |
+| `tests/test_clean_news_data.py` | Derived article ids, day-precision `available_from` cutoff guard, duplicate detection, unassigned labels stay unassigned |
+| `tests/test_inspect_data.py` | End-to-end run of the inspection CLI on cached fixtures: report contents, processed tables, manifest entries, exit code |
 
 ## Limitations and responsible use
 
@@ -131,3 +173,4 @@ Treat every number this project produces as a model output for study — never a
 - [PROJECT_DESCRIPTION.md](PROJECT_DESCRIPTION.md) — full specification, schema, milestones, and risk register.
 - [docs/ROADMAP.md](docs/ROADMAP.md) — step-by-step progress and change log.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — target architecture: data flow, layers, design invariants, API surface.
+- [AGENTS.md](AGENTS.md) — operating rules for coding agents: doc-update duties, testing and data conventions, guardrails.

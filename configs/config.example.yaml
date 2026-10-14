@@ -1,0 +1,52 @@
+# Example configuration for Phase 1 (define and inspect data).
+#
+# Copy to configs/config.yaml and edit. Nothing here is a secret; data files are
+# downloaded into data/raw/ (git-ignored) and are never committed.
+#
+# Every timestamp handled by this project is normalised to UTC. The market series
+# uses one daily bar per exchange session; the news series carries a day-level
+# publication date only (see docs/dataset_notes.md).
+
+project:
+  name: geopolitical-stock-predictor
+  random_seed: 42
+
+data:
+  market:
+    # One broad index proxy first ("small and correct first"). Expand later, if at all.
+    symbol: SPY
+    start: "2018-01-01"
+    end: "2022-12-31"
+    interval: "1d"
+    timezone: "UTC"
+    source: "Yahoo Finance via yfinance (research/educational use; see docs/dataset_notes.md)"
+
+  news:
+    # Hugging Face mirror of the Kaggle "News Category Dataset" (HuffPost headlines).
+    # Licence: CC BY 4.0 — attribution required. Revision pins the exact snapshot.
+    dataset_id: "heegyu/news-category-dataset"
+    revision: "304a05a55bc6abc0446d8fae0d0771716b6a271a"
+    source_file: "data.json"
+    license: "CC BY 4.0"
+    license_url: "https://creativecommons.org/licenses/by/4.0/"
+    dataset_url: "https://huggingface.co/datasets/heegyu/news-category-dataset"
+    # The source's own "category" column is NOT our event taxonomy; we filter on it
+    # only to keep the first dataset small.
+    source_category_filter: "POLITICS"
+    start: "2018-01-01"
+    end: "2022-12-31"
+    max_articles: 12000
+    # The source provides a calendar date, not a publication time.
+    timestamp_precision: "day"
+
+prediction:
+  # Used from Phase 3 onward: everything in a feature row must be strictly earlier
+  # than this cutoff on the prediction day.
+  cutoff_time: "00:00"
+  target: "next_session_return_positive"
+
+trading:
+  # Used from Phase 5 onward. Simulated only — no live or real-money trading.
+  initial_capital: 100000.0
+  transaction_cost_bps: 10.0
+  position_fraction: 1.0

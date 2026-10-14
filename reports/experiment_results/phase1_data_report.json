@@ -1,0 +1,293 @@
+{
+  "generated_at_utc": "2026-10-13T18:04:33Z",
+  "phase": 1,
+  "phase_name": "Define and inspect data",
+  "config": {
+    "config_path": "configs/config.example.yaml",
+    "project": {
+      "name": "geopolitical-stock-predictor",
+      "random_seed": 42
+    },
+    "data": {
+      "market": {
+        "symbol": "SPY",
+        "start": "2018-01-01",
+        "end": "2022-12-31",
+        "interval": "1d",
+        "timezone": "UTC",
+        "source": "Yahoo Finance via yfinance (research/educational use; see docs/dataset_notes.md)"
+      },
+      "news": {
+        "dataset_id": "heegyu/news-category-dataset",
+        "revision": "304a05a55bc6abc0446d8fae0d0771716b6a271a",
+        "source_file": "data.json",
+        "license": "CC BY 4.0",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "dataset_url": "https://huggingface.co/datasets/heegyu/news-category-dataset",
+        "source_category_filter": "POLITICS",
+        "start": "2018-01-01",
+        "end": "2022-12-31",
+        "max_articles": 12000,
+        "timestamp_precision": "day"
+      }
+    },
+    "prediction": {
+      "cutoff_time": "00:00",
+      "target": "next_session_return_positive"
+    },
+    "trading": {
+      "initial_capital": 100000.0,
+      "transaction_cost_bps": 10.0,
+      "position_fraction": 1.0
+    }
+  },
+  "datasets": {
+    "market": {
+      "symbol": "SPY",
+      "interval": "1d",
+      "raw_file": "data/raw/market/SPY_1d_20180101_20221231.csv",
+      "processed_file": "data/processed/market_SPY_1d_clean.csv",
+      "raw_rows": 1259,
+      "sessions": 1259,
+      "first_session": "2018-01-02",
+      "last_session": "2022-12-30",
+      "quality": {
+        "table": "market_clean",
+        "rows_read": 1259,
+        "rows_written": 1259,
+        "duplicate_key": "symbol+timestamp",
+        "duplicates_removed": 0,
+        "rows_dropped_unparsable_timestamp": 0,
+        "rows_dropped_missing_required": 0,
+        "rows_outside_window": 0,
+        "coerced_to_missing": {},
+        "missing_counts": {
+          "adj_close": 0,
+          "close": 0,
+          "high": 0,
+          "low": 0,
+          "open": 0,
+          "source": 0,
+          "symbol": 0,
+          "timestamp": 0,
+          "volume": 0
+        },
+        "missing_ratio": {
+          "adj_close": 0.0,
+          "close": 0.0,
+          "high": 0.0,
+          "low": 0.0,
+          "open": 0.0,
+          "source": 0.0,
+          "symbol": 0.0,
+          "timestamp": 0.0,
+          "volume": 0.0
+        },
+        "columns_with_missing": {},
+        "input_chronological": true,
+        "date_range": [
+          "2018-01-02T05:00:00Z",
+          "2022-12-30T05:00:00Z"
+        ],
+        "timezone_assumptions": [
+          "datetime64 input carried timezone UTC; converted to UTC instants"
+        ],
+        "imputation_applied": [],
+        "notes": [
+          "no imputation or forward-fill: missing prices stay missing, and non-trading days simply have no row (invariant 3)",
+          "each row is one exchange session; the timestamp is a UTC date stamp for that session, not an intraday instant"
+        ],
+        "warnings": []
+      }
+    },
+    "news": {
+      "dataset_id": "heegyu/news-category-dataset",
+      "revision": "304a05a55bc6abc0446d8fae0d0771716b6a271a",
+      "license": "CC BY 4.0",
+      "subset_file": "data/interim/news_politics_20180101_20221231.csv",
+      "processed_file": "data/processed/news_news-category-dataset_politics_clean.csv",
+      "raw_rows": 5930,
+      "articles": 5930,
+      "first_published": "2018-01-01",
+      "last_published": "2022-09-19",
+      "quality": {
+        "table": "news_clean",
+        "rows_read": 5930,
+        "rows_written": 5930,
+        "duplicate_key": "article_id; then headline+published_at",
+        "duplicates_removed": 0,
+        "rows_dropped_unparsable_timestamp": 0,
+        "rows_dropped_missing_required": 0,
+        "rows_outside_window": 0,
+        "coerced_to_missing": {},
+        "missing_counts": {
+          "affected_sector": 5930,
+          "article_id": 0,
+          "article_text": 0,
+          "authors": 134,
+          "available_from": 0,
+          "event_category": 5930,
+          "headline": 0,
+          "published_at": 0,
+          "sentiment_label": 5930,
+          "sentiment_score": 5930,
+          "source": 0,
+          "source_category": 0,
+          "source_url": 0
+        },
+        "missing_ratio": {
+          "affected_sector": 1.0,
+          "article_id": 0.0,
+          "article_text": 0.0,
+          "authors": 0.022597,
+          "available_from": 0.0,
+          "event_category": 1.0,
+          "headline": 0.0,
+          "published_at": 0.0,
+          "sentiment_label": 1.0,
+          "sentiment_score": 1.0,
+          "source": 0.0,
+          "source_category": 0.0,
+          "source_url": 0.0
+        },
+        "columns_with_missing": {
+          "affected_sector": 5930,
+          "authors": 134,
+          "event_category": 5930,
+          "sentiment_label": 5930,
+          "sentiment_score": 5930
+        },
+        "input_chronological": true,
+        "date_range": [
+          "2018-01-01T00:00:00Z",
+          "2022-09-19T00:00:00Z"
+        ],
+        "timezone_assumptions": [
+          "the source publishes a calendar date only; published_at is midnight UTC of that date and the time of day is unknown"
+        ],
+        "imputation_applied": [],
+        "notes": [
+          "available_from = published_at + 1 day; use it (not published_at) for feature cutoffs so day-level timestamps cannot leak same-day, post-cutoff news (invariant 2)",
+          "article_text is the source's short_description field (the dataset has no body text)",
+          "source_category is the publisher's own label, kept separate from our event taxonomy",
+          "publisher taken from the article URL (host, 'www.' stripped); no fallback label is configured, so an article without a URL keeps a missing source",
+          "article_id is derived (SHA-1 of source_url|headline|date), not a source field",
+          "duplicates removed: 0 identical article_id, 0 identical headline+date",
+          "event_category, sentiment_label, sentiment_score and affected_sector are intentionally unassigned in Phase 1 and are reported as missing rather than filled with placeholders",
+          "no headline text was rewritten, truncated, or normalised beyond trimming surrounding whitespace"
+        ],
+        "warnings": []
+      }
+    }
+  },
+  "summary": {
+    "market_rows": 1259,
+    "market_columns": [
+      "symbol",
+      "timestamp",
+      "open",
+      "high",
+      "low",
+      "close",
+      "adj_close",
+      "volume",
+      "source"
+    ],
+    "market_missing_cells": {},
+    "news_rows": 5930,
+    "news_columns": [
+      "article_id",
+      "published_at",
+      "available_from",
+      "headline",
+      "article_text",
+      "source",
+      "source_url",
+      "source_category",
+      "authors",
+      "event_category",
+      "sentiment_label",
+      "sentiment_score",
+      "affected_sector"
+    ],
+    "news_missing_cells": {
+      "authors": 134,
+      "event_category": 5930,
+      "sentiment_label": 5930,
+      "sentiment_score": 5930,
+      "affected_sector": 5930
+    },
+    "news_publishers": {
+      "huffingtonpost.com": 3067,
+      "huffpost.com": 2863
+    },
+    "class_balance_note": "Phase 1 has no prediction target yet, so target class balance is reported in Phase 3. Event-category balance depends on the Phase 2 annotation step; the single 'POLITICS' source category is a filter, not our taxonomy."
+  },
+  "checks": [
+    {
+      "name": "market_rows_present",
+      "passed": true,
+      "detail": "1259 session row(s) after cleaning"
+    },
+    {
+      "name": "market_chronological",
+      "passed": true,
+      "detail": "timestamps are strictly ascending after cleaning; no shuffling"
+    },
+    {
+      "name": "market_sessions_unique",
+      "passed": true,
+      "detail": "0 duplicate row(s) removed; 0 remain"
+    },
+    {
+      "name": "market_no_imputation",
+      "passed": true,
+      "detail": "no values imputed or forward-filled; reported missing cells: none"
+    },
+    {
+      "name": "news_rows_present",
+      "passed": true,
+      "detail": "5930 article row(s) after cleaning"
+    },
+    {
+      "name": "news_published_at_parsed",
+      "passed": true,
+      "detail": "0 row(s) dropped as unparsable before cleaning; 0 unparsable remain"
+    },
+    {
+      "name": "news_available_from_after_published_at",
+      "passed": true,
+      "detail": "every article is available from the day after its (day-precision) publication date, so a same-day cutoff cannot leak post-cutoff news"
+    },
+    {
+      "name": "news_article_ids_unique",
+      "passed": true,
+      "detail": "0 duplicate article(s) removed"
+    },
+    {
+      "name": "news_labels_not_invented",
+      "passed": true,
+      "detail": "unassigned columns stay empty: ['event_category', 'sentiment_label', 'sentiment_score', 'affected_sector']"
+    },
+    {
+      "name": "market_news_windows_overlap",
+      "passed": true,
+      "detail": "887 calendar day(s) present in both tables, first 2018-01-02 last 2022-09-19"
+    }
+  ],
+  "unassigned_columns": [
+    "event_category",
+    "sentiment_label",
+    "sentiment_score",
+    "affected_sector"
+  ],
+  "limitations": [
+    "News timestamps are day-level: time of day is unknown, so features must use available_from (Phase 4).",
+    "The source is general-interest political news, not a curated geopolitical corpus; a source category filter does not make every headline geopolitical.",
+    "Only one instrument (SPY) is covered in Phase 1; sector or multi-symbol coverage is out of scope for now.",
+    "event_category and sentiment columns are intentionally empty until Phase 2.",
+    "Coverage differs between the two tables where configured dates differ; overlapping coverage is reported above.",
+    "Market data comes from Yahoo Finance via yfinance and is used for research/education only; see docs/dataset_notes.md."
+  ],
+  "next_step": "Phase 2 \u2014 define the event taxonomy, then label a small reviewed sample and classify headlines."
+}
