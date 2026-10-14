@@ -116,7 +116,7 @@ Cleaned table (`data/processed/…_clean.csv`):
 | `source_url` | Original article link | populated |
 | `source_category` | The **publisher's own** category (`POLITICS`) — not our taxonomy | populated |
 | `authors` | Source author field | 134/5,930 missing (2.26%) |
-| `event_category`, `sentiment_label`, `sentiment_score`, `affected_sector` | Our labels | **intentionally unassigned until Phase 2** — reported as missing, never filled with placeholders |
+| `event_category`, `sentiment_label`, `sentiment_score`, `affected_sector` | Our labels | **left empty by cleaning** — reported as missing, never filled with placeholders. Phase 2 writes `event_category`, `sentiment_label` and `sentiment_score` into the separate *classified* table (§4); this cleaned table stays untouched. |
 
 ### Known gaps and limitations
 
@@ -127,8 +127,10 @@ Cleaned table (`data/processed/…_clean.csv`):
   `docs/ARCHITECTURE.md` §3).
 - **Not a geopolitical corpus.** This is general-interest political news. The
   `POLITICS` filter is a *size* filter; it does not make every headline geopolitical,
-  and no labeling has happened yet. Phase 2 defines the event taxonomy and measures how
-  many headlines actually match it — a low match rate is a valid, documentable result.
+  and no *human* labeling has happened yet. Phase 2 defines the event taxonomy and measures
+  the match rate: the baseline mapped **221 of 5,930 headlines (3.7%)** to one of the five
+  event categories, so the corpus is dominated by non-geopolitical domestic politics. That
+  is a valid, documentable result — downstream news features start from a very sparse signal.
 - **Publisher taxonomy ≠ ours.** The 42 upstream categories are HuffPost's. We keep them
   as `source_category` and never treat them as our event labels.
 - **No body text, no labels.** Classification will be headline-based (plus the short
@@ -181,7 +183,48 @@ python -m stock_project.data.inspect_data --config configs/config.example.yaml  
 
 ---
 
-## 4. Phase 1 checks (all passing on the retrieved data)
+## 4. Derived artifacts produced in Phase 2
+
+Phase 2 adds machine labels and human-review sheets; it adds **no new dataset**, so the
+source and licence rules above still govern everything here (CC BY 4.0 attribution continues
+to apply).
+
+| File | Rows / size | Committed? | Produced by |
+|---|---|---|---|
+| `data/processed/news_classified_news-category-dataset_politics.csv` | 5,930 / 2.5 MB | no (git-ignored) | `nlp.classify_news` |
+| `data/annotations/news_review_sample.csv` | 200 | **yes** | `nlp.annotate` |
+| `data/annotations/news_review_focus.csv` | 60 | **yes** | `nlp.annotate` |
+| `data/annotations/news_review_sample_labelling_log.jsonl` | 0 rows until labelling starts | **yes** | `nlp.labeller` |
+| `reports/experiment_results/phase2_classification_report.json` | 24 KB | **yes** | `nlp.classify_news` |
+| `reports/experiment_results/phase2_annotation_sheets.json` | 2 KB | **yes** | `nlp.annotate` |
+| `reports/experiment_results/phase2_classifier_evaluation.json` | 3 KB | **yes** | `nlp.evaluate_classifier` |
+
+Machine labels written (taxonomy v1.1, headline scope): `other_or_uncertain` 5,709 (96.3%),
+`armed_conflict` 96, `diplomatic_development` 78, `trade_restriction` 24, `sanctions` 17,
+`energy_or_supply_disruption` 6. These are **classifier outputs, not ground truth**, and are
+never presented as human labels. Sentiment (lexicon baseline): 266 positive, 451 negative,
+5,213 neutral, mean −0.031.
+
+Human labels: **none yet.** The review sheets ship with an empty `event_category` column and
+no prediction visible, and `phase2_classifier_evaluation.json` states that no metrics were
+computed rather than reporting placeholder numbers. Labelling is done with
+`python -m stock_project.nlp.labeller --reviewer "<name>"`, which writes only what a reviewer
+pressed (skips stay blank), rejects anything outside the taxonomy, and appends every change to
+the audit log above. `data/annotations/` is committed so the labelling work cannot be lost;
+derived data stays git-ignored because it regenerates from the commands below.
+
+### Reproducing Phase 2
+
+```bash
+python -m stock_project.nlp.classify_news       --config configs/config.example.yaml   # offline
+python -m stock_project.nlp.annotate            --config configs/config.example.yaml   # offline
+# human step: fill event_category in data/annotations/news_review_sample.csv
+python -m stock_project.nlp.evaluate_classifier --config configs/config.example.yaml   # offline
+```
+
+---
+
+## 5. Phase 1 checks (all passing on the retrieved data)
 
 | Check | Result |
 |---|---|

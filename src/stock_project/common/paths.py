@@ -46,6 +46,11 @@ def processed_dir(root: Path | str | None = None) -> Path:
     return data_dir(root) / "processed"
 
 
+def annotations_dir(root: Path | str | None = None) -> Path:
+    """Human-labelled review sheets. Committed: hand labelling is expensive work."""
+    return data_dir(root) / "annotations"
+
+
 def configs_dir(root: Path | str | None = None) -> Path:
     return project_root(root) / "configs"
 
@@ -76,6 +81,7 @@ def all_data_dirs(root: Path | str | None = None) -> list[Path]:
         raw_news_dir(root),
         interim_dir(root),
         processed_dir(root),
+        annotations_dir(root),
         results_dir(root),
         figures_dir(root),
     ]
@@ -107,6 +113,7 @@ def relative_to_root(path: Path | str, root: Path | str | None = None) -> str:
 __all__ = [
     "PROJECT_ROOT",
     "all_data_dirs",
+    "annotations_dir",
     "configs_dir",
     "data_dir",
     "ensure_directories",

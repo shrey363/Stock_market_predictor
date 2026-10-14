@@ -1,0 +1,2 @@
+{"action": "label", "article_id": "77b7ab785a1093df", "new_label": "armed_conflict", "note": "", "old_label": "", "reviewer": "sodium16", "sheet": "news_review_sample.csv", "timestamp_utc": "2026-10-14T07:41:16Z"}
+{"action": "undo", "article_id": "77b7ab785a1093df", "new_label": "", "note": "", "old_label": "armed_conflict", "reviewer": "sodium16", "sheet": "news_review_sample.csv", "timestamp_utc": "2026-10-14T07:41:19Z"}
