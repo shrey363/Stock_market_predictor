@@ -1,0 +1,83 @@
+{
+  "generated_at_utc": "2026-10-13T18:38:38Z",
+  "phase": 2,
+  "taxonomy_version": "1.1",
+  "config": {
+    "config_path": "configs/config.example.yaml",
+    "project": {
+      "name": "geopolitical-stock-predictor",
+      "random_seed": 42
+    },
+    "data": {
+      "market": {
+        "symbol": "SPY",
+        "start": "2018-01-01",
+        "end": "2022-12-31",
+        "interval": "1d",
+        "timezone": "UTC",
+        "source": "Yahoo Finance via yfinance (research/educational use; see docs/dataset_notes.md)"
+      },
+      "news": {
+        "dataset_id": "heegyu/news-category-dataset",
+        "revision": "304a05a55bc6abc0446d8fae0d0771716b6a271a",
+        "source_file": "data.json",
+        "license": "CC BY 4.0",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "dataset_url": "https://huggingface.co/datasets/heegyu/news-category-dataset",
+        "source_category_filter": "POLITICS",
+        "start": "2018-01-01",
+        "end": "2022-12-31",
+        "max_articles": 12000,
+        "timestamp_precision": "day"
+      }
+    },
+    "nlp": {
+      "text_scope": "headline",
+      "taxonomy_version": "1.1",
+      "sentiment_mode": "lexicon",
+      "review_sample_size": 200,
+      "review_sample_seed": 42
+    },
+    "prediction": {
+      "cutoff_time": "00:00",
+      "target": "next_session_return_positive"
+    },
+    "trading": {
+      "initial_capital": 100000.0,
+      "transaction_cost_bps": 10.0,
+      "position_fraction": 1.0
+    }
+  },
+  "inputs": {
+    "classified_news_file": "data/processed/news_classified_news-category-dataset_politics.csv",
+    "primary_sheet": "data/annotations/news_review_sample.csv"
+  },
+  "primary_sheet": {
+    "sheet": "data/annotations/news_review_sample.csv",
+    "rows_in_sheet": 200,
+    "labelled_rows": 0,
+    "unreviewed_rows": 200,
+    "reviewers": [],
+    "metrics": null,
+    "naive_majority_baseline": null,
+    "error_patterns": null,
+    "note": "No labels yet: the sheet is empty until a human reviews it. No metrics were computed."
+  },
+  "additional_sheets": {
+    "focus_sheet": {
+      "sheet": "data/annotations/news_review_focus.csv",
+      "labelled_rows": 0,
+      "note": "not labelled yet"
+    }
+  },
+  "misclassifications_file": null,
+  "limitations": [
+    "Metrics describe this labelled sample only; they are not an estimate for future articles.",
+    "200 row(s) in the sheet are unreviewed and were excluded, not counted as correct.",
+    "Labelled articles come from one publisher category, so the sample is not representative of all news.",
+    "Classification uses the headline (or headline+description) only; body text is not available in this dataset.",
+    "Per-class numbers for classes with few labels are unstable; treat small-support rows as indicative only.",
+    "This is a baseline, not a validated model: a result close to the naive baseline is a valid outcome to report."
+  ],
+  "next_step": "Label data/annotations/news_review_sample.csv by hand (rules: docs/annotation_guidelines.md), then re-run this command to compute precision/recall/F1. Phase 3 comes after that."
+}

@@ -1,6 +1,6 @@
 # Architecture
 
-Basic system architecture for the **Geopolitical Event-Aware Stock Market Prediction and Trading** project. This describes the *target* design; components are implemented phase by phase per [ROADMAP.md](ROADMAP.md). **Phase 1 is implemented** — ingestion, cleaning, and inspection live in `src/stock_project/` (§10 lists exactly what exists); every other layer below is still target design.
+Basic system architecture for the **Geopolitical Event-Aware Stock Market Prediction and Trading** project. This describes the *target* design; components are implemented phase by phase per [ROADMAP.md](ROADMAP.md). **Phases 1 and 2 are implemented** — ingestion, cleaning, inspection, event classification, sentiment scoring, and the review/evaluation tooling live in `src/stock_project/` (§10 lists exactly what exists). Phase 2's **evaluation is pending human labels**; the `features/`, `models/`, `trading/`, `backend/`, and `frontend/` layers are still target design.
 
 - Specification: [PROJECT_DESCRIPTION.md](../PROJECT_DESCRIPTION.md)
 - Overview and setup: [README.md](../README.md)
@@ -66,7 +66,7 @@ Basic system architecture for the **Geopolitical Event-Aware Stock Market Predic
 |---|---|---|
 | **Ingestion** | `src/stock_project/data/market_data.py`, `news_data.py` | Fetch/load raw OHLCV and news; record source and retrieval date; never modify raw files |
 | **Preprocessing** | `preprocessing/clean_market_data.py`, `clean_news_data.py` | Parse dates and timezones, deduplicate, report missing values, clean text |
-| **NLP** | `nlp/event_classifier.py`, `nlp/sentiment.py` | Assign event category (rule baseline first) and sentiment label/score; keep outputs traceable to article_id |
+| **NLP** | `nlp/taxonomy.py`, `event_classifier.py`, `sentiment.py`, `classify_news.py`, `annotate.py`, `labeller.py`, `evaluate_classifier.py` | Assign event category (rule baseline, priority order, veto phrases) and sentiment label/score; keep every output traceable to `article_id` **and** to the matched terms; produce the human review sheets, collect human labels without inventing any, and evaluate |
 | **Features** | `features/technical_indicators.py`, `features/news_features.py` | Session-level market indicators; news aggregation using only pre-cutoff articles; explicit no-news indicator |
 | **Models** | `models/train_baseline.py`, `train_news_aware.py`, `evaluate.py` | Naive baseline, market-only and market+news models with matched settings; chronological evaluation |
 | **Trading** | `trading/simulator.py`, `gym_env.py`, `train_rl.py` | Deterministic portfolio simulator, Gymnasium wrapper, SB3 training, benchmark strategies |
@@ -91,8 +91,10 @@ These are architectural invariants, not suggestions — a component that breaks 
 Full field lists are in §6 of the specification. Summary of the two core tables:
 
 - **Market table (cleaned, implemented):** `symbol, timestamp, open, high, low, close, adj_close, volume, source` — one row per exchange session, timestamp UTC, unique on `(symbol, timestamp)`, never gap-filled or imputed.
-- **News table (cleaned, implemented):** `article_id, published_at, available_from, headline, article_text, source, source_url, source_category, authors, event_category, sentiment_label, sentiment_score, affected_sector` — where `article_id` is derived (SHA-1 of `source_url|headline|date`), `source` is the publisher host derived from the URL, `source_category` is the *publisher's* label kept separate from our taxonomy, `available_from = published_at + 1 day`, and the four label columns stay missing until Phase 2.
+- **News table (cleaned, implemented):** `article_id, published_at, available_from, headline, article_text, source, source_url, source_category, authors, event_category, sentiment_label, sentiment_score, affected_sector` — where `article_id` is derived (SHA-1 of `source_url|headline|date`), `source` is the publisher host derived from the URL, `source_category` is the *publisher's* label kept separate from our taxonomy, `available_from = published_at + 1 day`, and the four label columns are left **empty** by cleaning — Phase 2 fills `event_category`, `sentiment_label`, and `sentiment_score` in the separate classified table below, and `affected_sector` stays unassigned.
 - **Filtered news subset (interim, implemented):** `link, headline, category, short_description, authors, date` — the source columns for one publisher category inside the configured window, before validation.
+- **Classified news table (processed, implemented):** the Phase 1 contract plus `event_category, event_priority, matched_keywords, competing_categories, excluded_evidence, evidence_negated, conditional, classified_scope, matched_term_count, sentiment_label, sentiment_score, sentiment_terms`. Machine-generated baseline outputs — never presented as human labels. `event_category` is written by the classifier; the *human* label column lives only in `data/annotations/`.
+- **Review sheets (annotations, implemented):** `article_id, published_at, headline, source, source_category, sampling_reason, event_category, reviewer, reviewed_at, notes` — the label column is written empty and filled only by a human. `data/annotations/` is committed because hand labelling is expensive work that must not be lost or overwritten.
 - **Feature table (processed):** one row per (symbol, session) — lagged returns, MA/RSI/volatility, per-category article counts, mean sentiment, pos/neg/neutral counts, hours since last relevant article, `no_news` indicator, and the binary target.
 
 Storage stays CSV/JSON on disk until a real need arises; MongoDB is explicitly a later option, not a default dependency.
@@ -137,7 +139,8 @@ Every rule in §3 has (or will have) an explicit, offline test — a comment is 
 | Prediction cutoff | Adding/changing a news row published after the cutoff leaves that session's feature row unchanged | Phase 4 |
 | No silent fills | Phase 1: per-column missing counts are reported, no value is imputed or forward-filled, and label columns stay empty. Phase 4: a session with no pre-cutoff articles gets all-zero counts **and** `no_news = 1` | Phase 1, completed in Phase 4 |
 | Day-level news timestamps | Every cleaned article has `available_from = published_at + 1 day`, so a same-day cutoff cannot leak post-cutoff news | Phase 1 (guard), consumed in Phase 4 |
-| Traceability | Every classified article still carries `article_id`, text, timestamp, and source (Phase 1 asserts this on the cleaned table; Phase 2 must assert it survives classification) | Phase 1, extended in Phase 2 |
+| Traceability | Every classified article still carries `article_id`, text, timestamp, and source, plus the matched keywords, competing categories, and vetoed evidence behind its label | Phase 2 (asserted in `test_clean_news_data`, `test_classify_news`) |
+| No invented labels | The classifier writes machine labels only into the processed table; the human review sheet's label column is written empty, unreviewed rows are counted separately from correct ones, and a label outside the taxonomy is a hard error. The labeller only ever writes what a reviewer pressed, keeps skips blank, logs every change to an append-only JSONL file, and serves the reviewer context columns only — never the prediction | Phase 2 (`test_annotate`, `test_evaluate_classifier`, `test_labeller`) |
 | Simulator determinism | Replaying identical prices + costs + actions yields identical cash, positions, and portfolio value (hand-checked numeric fixtures) | Phase 5 |
 | RL information set | Mutating rows after step `t` does not change the observation at `t` | Phase 6 |
 | Artifact contract | Values returned by the API/dashboard equal the values in `reports/experiment_results/` | Phase 7 |
@@ -176,12 +179,30 @@ Implemented and tested:
 | `data/inspect_data.py` | CLI: clean, validate, write `data/processed/` and the Phase 1 JSON report |
 | `preprocessing/clean_market_data.py` | Strict ISO-8601 parsing, UTC normalisation, dedupe, ordering, sanity warnings, no imputation |
 | `preprocessing/clean_news_data.py` | Derived ids, day-precision `available_from` guard, dedupe, unassigned labels stay unassigned |
+| `nlp/taxonomy.py` | The six categories in priority order, keyword lexicons, veto phrases, negation/conditional markers, sentiment terms (versioned data, not logic) |
+| `nlp/event_classifier.py` | Transparent rule baseline: token-sequence matching, priority tie-breaks, negation/speculation flags, veto suppression, per-article evidence columns |
+| `nlp/sentiment.py` | Lexicon sentiment on `[-1, 1]` with negation flipping; `finbert` is a documented, not-yet-wired mode that fails loudly |
+| `nlp/classify_news.py` | CLI: writes `data/processed/news_classified_*.csv` and `phase2_classification_report.json` |
+| `nlp/annotate.py` | CLI: deterministic random + stratified review sheets with empty labels; refuses to overwrite existing labels |
+| `nlp/labeller.py` | CLI + loopback-only HTTP UI: one headline at a time, keyboard shortcuts, atomic sheet writes, undo, and an append-only `<sheet>_labelling_log.jsonl` audit trail; blind by construction |
+| `nlp/evaluate_classifier.py` | CLI: per-class precision/recall/F1, balanced accuracy, kappa, naive baseline, error listing — `phase2_classifier_evaluation.json` |
 
-Artifact contract: `reports/experiment_results/phase1_data_report.json` carries the config
-snapshot, per-table quality reports, coverage, ten explicit pass/fail checks, the columns still
-unassigned, and the known limitations. Paths inside every artifact are project-relative, so the
-report is diffable and portable. The backend/dashboard and later phases read this file — nothing
-re-derives numbers by hand.
+Artifact contract:
 
-Not yet implemented (still target design): `nlp/`, `features/`, `models/`, `trading/`,
-`backend/`, `frontend/`, and the supervised/RL experiment artifacts.
+* `reports/experiment_results/phase1_data_report.json` — config snapshot, per-table quality
+  reports, coverage, ten explicit pass/fail checks, columns still unassigned, known limitations.
+* `reports/experiment_results/phase2_classification_report.json` — method (taxonomy version, text
+  scope, sentiment mode), category distribution with an explicit imbalance block, evidence-flag
+  counts, worked examples per category, and the limitations carried forward.
+* `reports/experiment_results/phase2_annotation_sheets.json` — the review sheets, their sampling
+  method, the allowed label values, and the statement that no labels were written. Labelling adds
+  `data/annotations/<sheet>_labelling_log.jsonl` (append-only: timestamp, article, old label, new
+  label, reviewer), so a reviewed sheet is always reconstructible.
+* `reports/experiment_results/phase2_classifier_evaluation.json` — metrics against human labels
+  (or an explicit "no labels yet" record), plus `phase2_misclassifications.csv`.
+
+Paths inside every artifact are project-relative, so reports are diffable and portable. The
+backend/dashboard and later phases read these files — nothing re-derives numbers by hand.
+
+Not yet implemented (still target design): `features/`, `models/`, `trading/`, `backend/`,
+`frontend/`, and the supervised/RL experiment artifacts.

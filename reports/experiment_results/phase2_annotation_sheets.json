@@ -1,0 +1,48 @@
+{
+  "generated_at_utc": "2026-10-13T18:26:03Z",
+  "phase": 2,
+  "taxonomy_version": "1.1",
+  "guidelines": "docs/annotation_guidelines.md",
+  "seed": 42,
+  "blind_labelling": true,
+  "allowed_labels": [
+    "armed_conflict",
+    "sanctions",
+    "trade_restriction",
+    "energy_or_supply_disruption",
+    "diplomatic_development",
+    "other_or_uncertain"
+  ],
+  "category_definitions": {
+    "armed_conflict": "Kinetic hostilities: war, strikes, troops, invasions, ceasefires, casualties.",
+    "sanctions": "Coercive economic measures against a state or entity: sanctions, embargoes, asset freezes.",
+    "trade_restriction": "Barriers or bargains in cross-border trade: tariffs, bans, quotas, trade deals and disputes.",
+    "energy_or_supply_disruption": "Physical supply or energy disruption: shortages, pipelines, OPEC, ports, blackouts.",
+    "diplomatic_development": "Statecraft without coercion: summits, talks, treaties, ambassadors, alliances.",
+    "other_or_uncertain": "Everything else, including domestic politics, or anything genuinely ambiguous."
+  },
+  "sheets": {
+    "random_sample": {
+      "file": "data/annotations/news_review_sample.csv",
+      "rows": 200,
+      "purpose": "unbiased estimate of classifier precision/recall/F1"
+    },
+    "focus_sample": {
+      "file": "data/annotations/news_review_focus.csv",
+      "rows": 60,
+      "purpose": "qualitative review of flagged evidence and small classes; NOT for headline metrics",
+      "sampling_reason_counts": {
+        "small_category": 35,
+        "flagged_evidence": 16,
+        "flagged_evidence+small_category": 9
+      }
+    }
+  },
+  "labels_written": 0,
+  "notes": [
+    "The event_category column is written empty: labels come only from human review.",
+    "Sampling is deterministic: the same classified table + seed reproduces the same sheets.",
+    "Only the random sheet supports unbiased metrics; the focus sheet is deliberately stratified."
+  ],
+  "next_step": "Label the sheets by hand against docs/annotation_guidelines.md, then run: python -m stock_project.nlp.evaluate_classifier"
+}
