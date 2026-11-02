@@ -1,0 +1,621 @@
+{
+  "generated_at_utc": "2026-10-13T18:26:02Z",
+  "phase": 2,
+  "phase_name": "News classification and sentiment",
+  "config": {
+    "config_path": "configs/config.example.yaml",
+    "project": {
+      "name": "geopolitical-stock-predictor",
+      "random_seed": 42
+    },
+    "data": {
+      "market": {
+        "symbol": "SPY",
+        "start": "2018-01-01",
+        "end": "2022-12-31",
+        "interval": "1d",
+        "timezone": "UTC",
+        "source": "Yahoo Finance via yfinance (research/educational use; see docs/dataset_notes.md)"
+      },
+      "news": {
+        "dataset_id": "heegyu/news-category-dataset",
+        "revision": "304a05a55bc6abc0446d8fae0d0771716b6a271a",
+        "source_file": "data.json",
+        "license": "CC BY 4.0",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "dataset_url": "https://huggingface.co/datasets/heegyu/news-category-dataset",
+        "source_category_filter": "POLITICS",
+        "start": "2018-01-01",
+        "end": "2022-12-31",
+        "max_articles": 12000,
+        "timestamp_precision": "day"
+      }
+    },
+    "nlp": {
+      "text_scope": "headline",
+      "taxonomy_version": "1.1",
+      "sentiment_mode": "lexicon",
+      "review_sample_size": 200,
+      "review_sample_seed": 42
+    },
+    "prediction": {
+      "cutoff_time": "00:00",
+      "target": "next_session_return_positive"
+    },
+    "trading": {
+      "initial_capital": 100000.0,
+      "transaction_cost_bps": 10.0,
+      "position_fraction": 1.0
+    }
+  },
+  "inputs": {
+    "cleaned_news_file": "data/processed/news_news-category-dataset_politics_clean.csv",
+    "articles": 5930,
+    "empty_headlines": 0
+  },
+  "method": {
+    "taxonomy_version": "1.1",
+    "configured_taxonomy_version": "1.1",
+    "event_classifier": "transparent keyword/rule baseline; priority order decides ties",
+    "exclusion_phrases_applied": true,
+    "text_scope": "headline",
+    "sentiment_mode": "lexicon",
+    "sentiment_scorer": "lexicon with negation handling, score in [-1, 1]",
+    "sentiment_input": "same text as classification (headline)",
+    "event_categories": [
+      "armed_conflict",
+      "sanctions",
+      "trade_restriction",
+      "energy_or_supply_disruption",
+      "diplomatic_development",
+      "other_or_uncertain"
+    ]
+  },
+  "classification": {
+    "articles_classified": 5930,
+    "articles_in_scope": 5930,
+    "category_distribution": {
+      "armed_conflict": {
+        "count": 96,
+        "share": 0.016189
+      },
+      "sanctions": {
+        "count": 17,
+        "share": 0.002867
+      },
+      "trade_restriction": {
+        "count": 24,
+        "share": 0.004047
+      },
+      "energy_or_supply_disruption": {
+        "count": 6,
+        "share": 0.001012
+      },
+      "diplomatic_development": {
+        "count": 78,
+        "share": 0.013153
+      },
+      "other_or_uncertain": {
+        "count": 5709,
+        "share": 0.962732
+      }
+    },
+    "unmatched_share": 0.962732,
+    "articles_with_competing_categories": 2,
+    "articles_with_excluded_evidence": 15,
+    "articles_with_negated_evidence": 7,
+    "articles_with_conditional_evidence": 18,
+    "class_imbalance": {
+      "classes_present": 6,
+      "largest_class": "other_or_uncertain",
+      "smallest_class": "energy_or_supply_disruption",
+      "largest_to_smallest_ratio": 951.5,
+      "note": "Accuracy alone is misleading under this imbalance; per-class precision/recall and balanced accuracy are reported alongside it, and rare classes may have too few examples to evaluate."
+    }
+  },
+  "sentiment": {
+    "label_distribution": {
+      "positive": {
+        "count": 266,
+        "share": 0.044857
+      },
+      "neutral": {
+        "count": 5213,
+        "share": 0.879089
+      },
+      "negative": {
+        "count": 451,
+        "share": 0.076054
+      }
+    },
+    "mean_score": -0.030972,
+    "articles_with_no_term": 5195,
+    "note": "Score is text tone, not severity or expected market impact."
+  },
+  "traceability": {
+    "columns_preserved": [
+      "article_id",
+      "published_at",
+      "available_from",
+      "headline",
+      "source_url",
+      "source_category"
+    ],
+    "matched_keywords_recorded": true,
+    "output_file": "data/processed/news_classified_news-category-dataset_politics.csv"
+  },
+  "examples": {
+    "per_category": {
+      "armed_conflict": [
+        {
+          "article_id": "4fd295cd288859ab",
+          "published_at": "2018-01-17 00:00:00+00:00",
+          "event_category": "armed_conflict",
+          "matched_keywords": "missile",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "neutral",
+          "headline": "Trump: North Korea 'Closer Every Day' On Long-Range Missile"
+        },
+        {
+          "article_id": "bcc18e7d937978e3",
+          "published_at": "2018-01-19 00:00:00+00:00",
+          "event_category": "armed_conflict",
+          "matched_keywords": "offensive",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "neutral",
+          "headline": "Trump Appointee Carl Higbie Resigns Following Offensive Comments"
+        },
+        {
+          "article_id": "150993798d310420",
+          "published_at": "2018-01-21 00:00:00+00:00",
+          "event_category": "armed_conflict",
+          "matched_keywords": "troops",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "neutral",
+          "headline": "Department Of Defense Makes Sure Troops Can Watch Football Despite Shutdown"
+        },
+        {
+          "article_id": "03abe5a995f0b4fc",
+          "published_at": "2018-01-30 00:00:00+00:00",
+          "event_category": "armed_conflict",
+          "matched_keywords": "offensive",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "neutral",
+          "headline": "Companies Are On A Cheap Charm Offensive For Trump's Tax Bill"
+        }
+      ],
+      "sanctions": [
+        {
+          "article_id": "3f2be6a843901504",
+          "published_at": "2018-01-11 00:00:00+00:00",
+          "event_category": "sanctions",
+          "matched_keywords": "sanctions",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "neutral",
+          "headline": "Top Advisors Urge Trump To Waive Iran Sanctions"
+        },
+        {
+          "article_id": "36df805c8b2fcb04",
+          "published_at": "2018-01-12 00:00:00+00:00",
+          "event_category": "sanctions",
+          "matched_keywords": "sanctions",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "positive",
+          "headline": "Trump Reluctantly Grants Iran Relief From Sanctions"
+        },
+        {
+          "article_id": "0f6ae9f72dbb90a1",
+          "published_at": "2018-01-30 00:00:00+00:00",
+          "event_category": "sanctions",
+          "matched_keywords": "sanctions",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "neutral",
+          "headline": "Trump Administration Signals It Is Not Imposing New Sanctions On Russia"
+        },
+        {
+          "article_id": "e381f88f051b86b3",
+          "published_at": "2018-02-07 00:00:00+00:00",
+          "event_category": "sanctions",
+          "matched_keywords": "sanctions",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "neutral",
+          "headline": "Pence Vows Toughest Sanctions Ever On North Korea Ahead Of Winter Olympics"
+        }
+      ],
+      "trade_restriction": [
+        {
+          "article_id": "310059a90cced28b",
+          "published_at": "2018-01-31 00:00:00+00:00",
+          "event_category": "trade_restriction",
+          "matched_keywords": "trade deficit",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "neutral",
+          "headline": "Despite Tough Talk, The Trade Deficit Is Up Under Trump"
+        },
+        {
+          "article_id": "d4c7603dea87014a",
+          "published_at": "2018-03-01 00:00:00+00:00",
+          "event_category": "trade_restriction",
+          "matched_keywords": "tariff",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "negative",
+          "headline": "Stocks Tumble As Trump Announces Tariff On Steel And Aluminum Imports"
+        },
+        {
+          "article_id": "0a618a47198c3182",
+          "published_at": "2018-03-02 00:00:00+00:00",
+          "event_category": "trade_restriction",
+          "matched_keywords": "tariff",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "neutral",
+          "headline": "Trump's Tariff Tirade Makes More Sense After You Watch 'Mean Girls'"
+        },
+        {
+          "article_id": "3d998d2716585675",
+          "published_at": "2018-03-02 00:00:00+00:00",
+          "event_category": "trade_restriction",
+          "matched_keywords": "tariff",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "neutral",
+          "headline": "Beer Companies Say Trump\u2019s Aluminum Tariff Will Raise Prices And Hurt The Industry"
+        }
+      ],
+      "energy_or_supply_disruption": [
+        {
+          "article_id": "e74d9669338df9c5",
+          "published_at": "2018-02-12 00:00:00+00:00",
+          "event_category": "energy_or_supply_disruption",
+          "matched_keywords": "pipelines",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "positive",
+          "headline": "Trump Wants To Give Ryan Zinke The Power To Approve Pipelines In National Parks"
+        },
+        {
+          "article_id": "e6844f7142617955",
+          "published_at": "2018-04-03 00:00:00+00:00",
+          "event_category": "energy_or_supply_disruption",
+          "matched_keywords": "pipeline",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "positive",
+          "headline": "EPA Reportedly Approved Pipeline Project Linked To Lobbyist Renting Room To Pruitt"
+        },
+        {
+          "article_id": "adc51606a8335e0f",
+          "published_at": "2020-04-16 00:00:00+00:00",
+          "event_category": "energy_or_supply_disruption",
+          "matched_keywords": "pipeline",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "positive",
+          "headline": "\u2018Tremendous Victory\u2019 For Wildlife: Federal Judge Invalidates Keystone XL Pipeline Permit"
+        },
+        {
+          "article_id": "d320e64fd4bb2a4f",
+          "published_at": "2021-05-14 00:00:00+00:00",
+          "event_category": "energy_or_supply_disruption",
+          "matched_keywords": "pipeline",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "neutral",
+          "headline": "Colonial Pipeline Reportedly Paid $5 Million Ransom After Hack"
+        }
+      ],
+      "diplomatic_development": [
+        {
+          "article_id": "b99207d47c42beeb",
+          "published_at": "2018-01-09 00:00:00+00:00",
+          "event_category": "diplomatic_development",
+          "matched_keywords": "diplomat",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "neutral",
+          "headline": "Nikki Haley Continues Hallowed Tradition Of The Arrogant, Clueless American Diplomat"
+        },
+        {
+          "article_id": "0f31eb5c0c7e4bba",
+          "published_at": "2018-01-11 00:00:00+00:00",
+          "event_category": "diplomatic_development",
+          "matched_keywords": "ambassador",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "neutral",
+          "headline": "Trump's New Ambassador Finally Tells Dutch He Was Wrong About Muslim 'No-Go' Zones"
+        },
+        {
+          "article_id": "dc2a88eca0b52453",
+          "published_at": "2018-01-12 00:00:00+00:00",
+          "event_category": "diplomatic_development",
+          "matched_keywords": "ambassador",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "neutral",
+          "headline": "U.S. Ambassador To Panama Resigns, Saying He Cannot Serve Trump"
+        },
+        {
+          "article_id": "4c3a7d114787e7fb",
+          "published_at": "2018-01-14 00:00:00+00:00",
+          "event_category": "diplomatic_development",
+          "matched_keywords": "talks",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "neutral",
+          "headline": "Rand Paul Says Calling Trump 'A Racist' Hurts Immigration Talks"
+        }
+      ],
+      "other_or_uncertain": [
+        {
+          "article_id": "141aa7de358c0979",
+          "published_at": "2018-01-01 00:00:00+00:00",
+          "event_category": "other_or_uncertain",
+          "matched_keywords": "",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "neutral",
+          "headline": "The 'Merchants Of Death' Survive And Prosper"
+        },
+        {
+          "article_id": "3b8a50ca9ca59022",
+          "published_at": "2018-01-01 00:00:00+00:00",
+          "event_category": "other_or_uncertain",
+          "matched_keywords": "",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "neutral",
+          "headline": "U.S. Politicians Can Afford To Grow A Spine On Saudi Arabia"
+        },
+        {
+          "article_id": "52b87b4b5f945692",
+          "published_at": "2018-01-01 00:00:00+00:00",
+          "event_category": "other_or_uncertain",
+          "matched_keywords": "",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "neutral",
+          "headline": "Could The U.S. Pass The EU\u2019s Democracy Test?"
+        },
+        {
+          "article_id": "5cf1974118f3fb02",
+          "published_at": "2018-01-01 00:00:00+00:00",
+          "event_category": "other_or_uncertain",
+          "matched_keywords": "",
+          "competing_categories": "",
+          "excluded_evidence": "",
+          "sentiment_label": "neutral",
+          "headline": "Barack Obama Shares His Favorite Books And Songs From 2017"
+        }
+      ]
+    },
+    "flagged_negated": [
+      {
+        "article_id": "36df805c8b2fcb04",
+        "published_at": "2018-01-12 00:00:00+00:00",
+        "event_category": "sanctions",
+        "matched_keywords": "sanctions",
+        "competing_categories": "",
+        "excluded_evidence": "",
+        "sentiment_label": "positive",
+        "headline": "Trump Reluctantly Grants Iran Relief From Sanctions"
+      },
+      {
+        "article_id": "0f6ae9f72dbb90a1",
+        "published_at": "2018-01-30 00:00:00+00:00",
+        "event_category": "sanctions",
+        "matched_keywords": "sanctions",
+        "competing_categories": "",
+        "excluded_evidence": "",
+        "sentiment_label": "neutral",
+        "headline": "Trump Administration Signals It Is Not Imposing New Sanctions On Russia"
+      },
+      {
+        "article_id": "7e2dea1cd609797b",
+        "published_at": "2018-02-05 00:00:00+00:00",
+        "event_category": "armed_conflict",
+        "matched_keywords": "war",
+        "competing_categories": "",
+        "excluded_evidence": "",
+        "sentiment_label": "neutral",
+        "headline": "10 Common-Sense Suggestions For Making Peace, Not War"
+      },
+      {
+        "article_id": "47002d61a2b57642",
+        "published_at": "2018-02-21 00:00:00+00:00",
+        "event_category": "diplomatic_development",
+        "matched_keywords": "talks",
+        "competing_categories": "",
+        "excluded_evidence": "",
+        "sentiment_label": "neutral",
+        "headline": "School Shooting's Survivors Cry As Florida House Rejects Talks On Assault Weapon Ban"
+      },
+      {
+        "article_id": "e88944f34849fe8d",
+        "published_at": "2018-03-19 00:00:00+00:00",
+        "event_category": "armed_conflict",
+        "matched_keywords": "invaded",
+        "competing_categories": "",
+        "excluded_evidence": "",
+        "sentiment_label": "neutral",
+        "headline": "Americans Say 2-to-1 That We Never Should Have Invaded Iraq"
+      },
+      {
+        "article_id": "6f8f0544ab459e08",
+        "published_at": "2020-04-13 00:00:00+00:00",
+        "event_category": "armed_conflict",
+        "matched_keywords": "war",
+        "competing_categories": "",
+        "excluded_evidence": "",
+        "sentiment_label": "neutral",
+        "headline": "A Pandemic Is Not A War"
+      }
+    ],
+    "flagged_conditional": [
+      {
+        "article_id": "e381f88f051b86b3",
+        "published_at": "2018-02-07 00:00:00+00:00",
+        "event_category": "sanctions",
+        "matched_keywords": "sanctions",
+        "competing_categories": "",
+        "excluded_evidence": "",
+        "sentiment_label": "neutral",
+        "headline": "Pence Vows Toughest Sanctions Ever On North Korea Ahead Of Winter Olympics"
+      },
+      {
+        "article_id": "a5573176cd9c92e0",
+        "published_at": "2018-02-21 00:00:00+00:00",
+        "event_category": "armed_conflict",
+        "matched_keywords": "combat",
+        "competing_categories": "",
+        "excluded_evidence": "",
+        "sentiment_label": "negative",
+        "headline": "Jeff Sessions Launches Effort To Better Combat Global Cyber Threats"
+      },
+      {
+        "article_id": "f9898a50d36242eb",
+        "published_at": "2018-02-21 00:00:00+00:00",
+        "event_category": "diplomatic_development",
+        "matched_keywords": "talks",
+        "competing_categories": "",
+        "excluded_evidence": "",
+        "sentiment_label": "neutral",
+        "headline": "Pence Planned Secret Talks With North Korea, But Meeting Was Called Off"
+      },
+      {
+        "article_id": "0c14ac5a1e5a4c97",
+        "published_at": "2018-03-05 00:00:00+00:00",
+        "event_category": "trade_restriction",
+        "matched_keywords": "tariff",
+        "competing_categories": "diplomatic_development",
+        "excluded_evidence": "",
+        "sentiment_label": "negative",
+        "headline": "Trump Puts Pressure On NAFTA Talks With More Tariff Threats"
+      },
+      {
+        "article_id": "c03d295f4a7baaf0",
+        "published_at": "2018-03-09 00:00:00+00:00",
+        "event_category": "trade_restriction",
+        "matched_keywords": "tariffs",
+        "competing_categories": "",
+        "excluded_evidence": "",
+        "sentiment_label": "neutral",
+        "headline": "Trump's Tariffs Could Make These Popular Products More Expensive"
+      },
+      {
+        "article_id": "5c02c3af5864513c",
+        "published_at": "2018-04-04 00:00:00+00:00",
+        "event_category": "armed_conflict",
+        "matched_keywords": "war",
+        "competing_categories": "",
+        "excluded_evidence": "",
+        "sentiment_label": "neutral",
+        "headline": "Could The Cold War Return With A Vengeance?"
+      }
+    ],
+    "competing_categories": [
+      {
+        "article_id": "0c14ac5a1e5a4c97",
+        "published_at": "2018-03-05 00:00:00+00:00",
+        "event_category": "trade_restriction",
+        "matched_keywords": "tariff",
+        "competing_categories": "diplomatic_development",
+        "excluded_evidence": "",
+        "sentiment_label": "negative",
+        "headline": "Trump Puts Pressure On NAFTA Talks With More Tariff Threats"
+      },
+      {
+        "article_id": "5f5eb551ababf5a2",
+        "published_at": "2022-03-15 00:00:00+00:00",
+        "event_category": "armed_conflict",
+        "matched_keywords": "war",
+        "competing_categories": "diplomatic_development",
+        "excluded_evidence": "",
+        "sentiment_label": "neutral",
+        "headline": "Biden To Travel To Europe For NATO Summit On Russia\u2019s War On Ukraine"
+      }
+    ],
+    "suppressed_evidence": [
+      {
+        "article_id": "01a3794b63215c8c",
+        "published_at": "2018-01-02 00:00:00+00:00",
+        "event_category": "other_or_uncertain",
+        "matched_keywords": "",
+        "competing_categories": "",
+        "excluded_evidence": "armed_conflict: war on drugs",
+        "sentiment_label": "negative",
+        "headline": "California's Marijuana Legalization Aims To Repair Damage From The War On Drugs"
+      },
+      {
+        "article_id": "057dbd2dbb6b748b",
+        "published_at": "2018-01-09 00:00:00+00:00",
+        "event_category": "other_or_uncertain",
+        "matched_keywords": "",
+        "competing_categories": "",
+        "excluded_evidence": "armed_conflict: non-war",
+        "sentiment_label": "neutral",
+        "headline": "Another 'Non-War Year' In America"
+      },
+      {
+        "article_id": "bc88ca4c3f4b39a3",
+        "published_at": "2018-01-11 00:00:00+00:00",
+        "event_category": "other_or_uncertain",
+        "matched_keywords": "",
+        "competing_categories": "",
+        "excluded_evidence": "armed_conflict: war pay",
+        "sentiment_label": "neutral",
+        "headline": "War Pay"
+      },
+      {
+        "article_id": "87d06c6268d6e0e6",
+        "published_at": "2018-01-16 00:00:00+00:00",
+        "event_category": "other_or_uncertain",
+        "matched_keywords": "",
+        "competing_categories": "",
+        "excluded_evidence": "armed_conflict: missile alert",
+        "sentiment_label": "neutral",
+        "headline": "Hawaii Governor Assigns General To Review Botched Missile Alert"
+      },
+      {
+        "article_id": "a30395d57e60644b",
+        "published_at": "2018-01-20 00:00:00+00:00",
+        "event_category": "other_or_uncertain",
+        "matched_keywords": "",
+        "competing_categories": "",
+        "excluded_evidence": "armed_conflict: missile alert",
+        "sentiment_label": "neutral",
+        "headline": "Hawaii Governor Knew Of False Missile Alert 2 Minutes After It Was Sent"
+      },
+      {
+        "article_id": "b0848b50601fd746",
+        "published_at": "2018-02-22 00:00:00+00:00",
+        "event_category": "other_or_uncertain",
+        "matched_keywords": "",
+        "competing_categories": "",
+        "excluded_evidence": "armed_conflict: invasion of privacy",
+        "sentiment_label": "neutral",
+        "headline": "Missouri Gov. Eric Greitens Indicted On Invasion Of Privacy Charge"
+      }
+    ]
+  },
+  "limitations": [
+    "Headline-scope classification by default: the headline is the only input, so events described only in the body text are missed (a documented Phase 2 limitation).",
+    "The source is general-interest political news; a high other_or_uncertain share is expected and is not a bug.",
+    "A keyword match is not proof an event happened: negation, threats, and speculation are only flagged (evidence_negated / conditional), not resolved.",
+    "Sentiment is text tone, not severity or expected market impact.",
+    "affected_sector is not assigned in Phase 2 (optional, manual field in the specification).",
+    "Predictions have not been compared with human labels yet: run the review sheet through evaluate_classifier to obtain precision/recall/F1.",
+    "The classifier has no notion of past vs new events; an anniversary headline reads the same as a fresh one."
+  ],
+  "next_step": "Label data/annotations/news_review_sample.csv by hand (see docs/annotation_guidelines.md), then run: python -m stock_project.nlp.evaluate_classifier"
+}

@@ -39,6 +39,19 @@ data:
     # The source provides a calendar date, not a publication time.
     timestamp_precision: "day"
 
+nlp:
+  # Phase 2: transparent keyword/rule-based event classification plus a lexicon sentiment
+  # baseline. Both are intentionally simple and auditable; a pretrained model is an optional
+  # later step, not a default dependency.
+  # "headline" classifies the headline only (documented Phase 2 limitation);
+  # "headline+description" also uses the source's short description.
+  text_scope: "headline"
+  taxonomy_version: "1.1"
+  sentiment_mode: "lexicon"
+  # Size and seed of the deterministic, stratified review sheet the team labels by hand.
+  review_sample_size: 200
+  review_sample_seed: 42
+
 prediction:
   # Used from Phase 3 onward: everything in a feature row must be strictly earlier
   # than this cutoff on the prediction day.

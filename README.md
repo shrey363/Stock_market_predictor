@@ -1,7 +1,7 @@
 # Geopolitical Event-Aware Stock Market Prediction and Trading
 
 > **AI/ML Mini Project · FinTech · Team of 2**
-> **Status:** Phase 1 (define and inspect data) complete — 73 tests passing. See [docs/ROADMAP.md](docs/ROADMAP.md) for live progress, [docs/dataset_notes.md](docs/dataset_notes.md) for the datasets actually used, and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design.
+> **Status:** Phase 1 complete; Phase 2 implemented (event classifier + sentiment baseline) with evaluation **pending the hand-labelled review sample** (label it with the bundled labeller, `python -m stock_project.nlp.labeller`) — 178 tests passing. See [docs/ROADMAP.md](docs/ROADMAP.md) for live progress, [docs/annotation_guidelines.md](docs/annotation_guidelines.md) for the labelling rules, [docs/dataset_notes.md](docs/dataset_notes.md) for the datasets, and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design.
 > **Disclaimer:** This is a research and *simulated* trading prototype. It does not provide financial advice, does not execute real trades, and makes no claim of reliable price prediction.
 
 ## Overview
@@ -62,21 +62,23 @@ geopolitical-stock-predictor/
 │   ├── common/                 # config.py, paths.py, quality.py, manifest.py, timeutils.py
 │   ├── data/                   # market_data.py, news_data.py, fetch_data.py, inspect_data.py
 │   ├── preprocessing/          # clean_market_data.py, clean_news_data.py
-│   ├── nlp/                    # (planned, Phase 2) event_classifier.py, sentiment.py
+│   ├── nlp/                    # taxonomy.py, event_classifier.py, sentiment.py,
+│   │                           # classify_news.py, annotate.py, labeller.py, evaluate_classifier.py
 │   ├── features/               # (planned, Phase 3) technical_indicators.py, news_features.py
 │   ├── models/                 # (planned, Phase 3-4) train_baseline.py, train_news_aware.py
 │   └── trading/                # (planned, Phase 5-6) simulator.py, gym_env.py, train_rl.py
 ├── tests/
 │   ├── conftest.py             # Offline fixtures (synthetic, hand-checkable)
 │   ├── fixtures/               # Tiny CSV/JSONL fixtures used by the tests
-│   └── test_*.py               # 6 modules covering config, ingestion, cleaning, inspection
+│   └── test_*.py               # 13 modules: config, ingestion, cleaning, inspection, nlp
 ├── reports/
-│   ├── experiment_results/     # phase1_data_report.json and later experiment artifacts
+│   ├── experiment_results/     # phase1_data_report.json, phase2_*.json, misclassifications
 │   └── figures/
 └── docs/
     ├── ARCHITECTURE.md         # System design: data flow, layers, invariants, contracts
     ├── ROADMAP.md              # Live progress log — updated with every change
-    ├── dataset_notes.md        # Dataset provenance, licences, coverage, gaps (Phase 1)
+    ├── dataset_notes.md        # Dataset provenance, licences, coverage, gaps
+    ├── annotation_guidelines.md # Event taxonomy, tie-breaks, labelling workflow (Phase 2)
     └── model_evaluation.md     # (planned, Phase 3+)
 ```
 
@@ -90,7 +92,7 @@ Full detail, checklists, and the running change log live in **[docs/ROADMAP.md](
 | Phase | Goal | Deliverable | Status |
 |---|---|---|---|
 | 1 | Define and inspect data | Documented, reproducible sample datasets | **Done** — see [docs/dataset_notes.md](docs/dataset_notes.md) |
-| 2 | News classification and sentiment | News dataset with traceable category/sentiment outputs | Next |
+| 2 | News classification and sentiment | News dataset with traceable category/sentiment outputs | **Implemented** — evaluation pending hand labels |
 | 3 | Market features and baseline prediction | Reproducible baseline metrics | Planned |
 | 4 | Add geopolitical features | Fair market-only vs market+news comparison | Planned |
 | 5 | Trading simulator | Tested historical simulator | Planned |
@@ -131,13 +133,38 @@ python -m stock_project.data.inspect_data --config configs/config.example.yaml
 Raw and derived datasets are git-ignored because they are fully regenerable with those two
 commands; the manifest and the report are committed.
 
+### Running Phase 2 (implemented; evaluation needs human labels)
+
+```bash
+# Classify events and score sentiment for the cleaned news table (offline)
+python -m stock_project.nlp.classify_news --config configs/config.example.yaml
+
+# Build the review sheets for hand labelling (labels are left empty on purpose)
+python -m stock_project.nlp.annotate --config configs/config.example.yaml
+
+# Human step: label the sheet. This serves a local page (127.0.0.1:8391) with one
+# headline at a time: press 1-6 for a category, s to skip, u to undo. Labels are
+# written to the sheet after every keystroke-confirmed choice, next to an append-only
+# audit log. --reviewer records who is labelling; --check prints progress only.
+python -m stock_project.nlp.labeller --config configs/config.example.yaml --reviewer "your name"
+# (rules and allowed values: docs/annotation_guidelines.md)
+
+# Evaluate the baseline against those labels (offline)
+python -m stock_project.nlp.evaluate_classifier --config configs/config.example.yaml
+```
+
+The labeller binds loopback only, never shows the classifier's prediction (labelling stays
+blind), rejects anything outside the taxonomy, and skips stay blank — an unreviewed row is
+never counted as a correct one.
+
 Concrete commands for later stages will be added here as those stages land (tracked in the roadmap).
 
 ## Testing
 
-**Current state:** 73 tests, all passing (`73 passed` via `pytest`), covering configuration
-validation, market and news ingestion, cleaning/validation, and the Phase 1 inspection
-artifact. No test touches the network.
+**Current state:** 178 tests, all passing (`178 passed` via `pytest`), covering configuration
+validation, market and news ingestion, cleaning/validation, the Phase 1 inspection artifact,
+and the Phase 2 machinery (taxonomy integrity, rule classifier, sentiment baseline, review
+sheets, the interactive labeller, metrics). No test touches the network.
 
 ```bash
 pytest          # or: pytest -q
@@ -147,7 +174,7 @@ The specification requires, at minimum: date/timezone parsing checks, duplicate 
 
 The suite must run offline and deterministically — no test may download market or news data — and this section is kept in sync with it (how to run, how many tests, what they cover) as each phase lands.
 
-What the current 73 tests cover:
+What the current 178 tests cover:
 
 | Module | Coverage |
 |---|---|
@@ -157,6 +184,13 @@ What the current 73 tests cover:
 | `tests/test_clean_market_data.py` | Timestamp/timezone normalisation, duplicate detection, chronological ordering, missing-value reporting, no-imputation guarantee |
 | `tests/test_clean_news_data.py` | Derived article ids, day-precision `available_from` cutoff guard, duplicate detection, unassigned labels stay unassigned |
 | `tests/test_inspect_data.py` | End-to-end run of the inspection CLI on cached fixtures: report contents, processed tables, manifest entries, exit code |
+| `tests/test_taxonomy.py` | The six categories match the specification exactly; lexicons are defined, duplicate-free, and polarity-disjoint |
+| `tests/test_event_classifier.py` | One expectation per category, priority tie-breaks, negation/conditional flags, veto phrases, scopes, determinism |
+| `tests/test_sentiment.py` | Exact hand-computed scores, negation flipping, bounds, mode selection (lexicon works, finbert fails loudly) |
+| `tests/test_classify_news.py` | Classified-table contract, traceability columns survive, distribution and report contents, empty-headline handling |
+| `tests/test_annotate.py` | Sheet determinism, blank labels, blind by default, focus-sheet strata, and refusal to overwrite human labels |
+| `tests/test_evaluate_classifier.py` | Hand-computed precision/recall/F1, balanced accuracy, kappa, naive baseline, label validation, unreviewed handling |
+| `tests/test_labeller.py` | Interactive labeller: taxonomy guard, atomic sheet rewrites, undo, audit log, blind browser payload, served-page JS escape regression, HTTP round-trip, loopback-only binding |
 
 ## Limitations and responsible use
 

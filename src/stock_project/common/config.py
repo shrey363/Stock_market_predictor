@@ -18,7 +18,13 @@ from .errors import ConfigError
 from .paths import configs_dir, relative_to_root
 
 SUPPORTED_TIMEZONE = "UTC"
-REQUIRED_SECTIONS = ("project", "data", "prediction", "trading")
+REQUIRED_SECTIONS = ("project", "data", "nlp", "prediction", "trading")
+
+#: Supported NLP text scopes (Phase 2 classifies headlines by default).
+TEXT_SCOPES = ("headline", "headline+description")
+
+#: Sentiment modes. "lexicon" is implemented; "finbert" is a documented, not-yet-wired option.
+SENTIMENT_MODES = ("lexicon", "finbert")
 
 
 def parse_iso_date(value: Any, *, where: str) -> date:
@@ -114,6 +120,15 @@ class NewsSettings:
 
 
 @dataclass(frozen=True)
+class NLPSettings:
+    text_scope: str
+    taxonomy_version: str
+    sentiment_mode: str
+    review_sample_size: int
+    review_sample_seed: int
+
+
+@dataclass(frozen=True)
 class PredictionSettings:
     cutoff_time: str
     target: str
@@ -133,6 +148,7 @@ class Config:
     project: ProjectSettings
     market: MarketSettings
     news: NewsSettings
+    nlp: NLPSettings
     prediction: PredictionSettings
     trading: TradingSettings
     path: Path
@@ -165,6 +181,13 @@ class Config:
                     "max_articles": self.news.max_articles,
                     "timestamp_precision": self.news.timestamp_precision,
                 },
+            },
+            "nlp": {
+                "text_scope": self.nlp.text_scope,
+                "taxonomy_version": self.nlp.taxonomy_version,
+                "sentiment_mode": self.nlp.sentiment_mode,
+                "review_sample_size": self.nlp.review_sample_size,
+                "review_sample_seed": self.nlp.review_sample_seed,
             },
             "prediction": {"cutoff_time": self.prediction.cutoff_time, "target": self.prediction.target},
             "trading": {
@@ -200,6 +223,7 @@ def load_config(path: Path | str | None = None, *, root: Path | str | None = Non
     data = _require_mapping(loaded, "data", where=where)
     market_raw = _require_mapping(data, "market", where=f"{where}: data")
     news_raw = _require_mapping(data, "news", where=f"{where}: data")
+    nlp_raw = _require_mapping(loaded, "nlp", where=where)
     project_raw = _require_mapping(loaded, "project", where=where)
     prediction_raw = _require_mapping(loaded, "prediction", where=where)
     trading_raw = _require_mapping(loaded, "trading", where=where)
@@ -247,6 +271,24 @@ def load_config(path: Path | str | None = None, *, root: Path | str | None = Non
         timestamp_precision=_require_str(news_raw, "timestamp_precision", where=news_where),
     )
 
+    nlp_where = f"{where}: nlp"
+    text_scope = _require_str(nlp_raw, "text_scope", where=nlp_where)
+    if text_scope not in TEXT_SCOPES:
+        raise ConfigError(f"{nlp_where}.text_scope must be one of {list(TEXT_SCOPES)}, got {text_scope!r}")
+    sentiment_mode = _require_str(nlp_raw, "sentiment_mode", where=nlp_where)
+    if sentiment_mode not in SENTIMENT_MODES:
+        raise ConfigError(f"{nlp_where}.sentiment_mode must be one of {list(SENTIMENT_MODES)}, got {sentiment_mode!r}")
+    review_sample_size = _require_int(nlp_raw, "review_sample_size", where=nlp_where)
+    if review_sample_size <= 0:
+        raise ConfigError(f"{nlp_where}.review_sample_size must be positive, got {review_sample_size}")
+    nlp = NLPSettings(
+        text_scope=text_scope,
+        taxonomy_version=_require_str(nlp_raw, "taxonomy_version", where=nlp_where),
+        sentiment_mode=sentiment_mode,
+        review_sample_size=review_sample_size,
+        review_sample_seed=_require_int(nlp_raw, "review_sample_seed", where=nlp_where),
+    )
+
     project_where = f"{where}: project"
     prediction_where = f"{where}: prediction"
     trading_where = f"{where}: trading"
@@ -278,6 +320,7 @@ def load_config(path: Path | str | None = None, *, root: Path | str | None = Non
         ),
         market=market,
         news=news,
+        nlp=nlp,
         prediction=prediction,
         trading=trading,
         path=resolved,
@@ -289,10 +332,13 @@ __all__ = [
     "Config",
     "ConfigError",
     "MarketSettings",
+    "NLPSettings",
     "NewsSettings",
     "PredictionSettings",
     "ProjectSettings",
+    "SENTIMENT_MODES",
     "SUPPORTED_TIMEZONE",
+    "TEXT_SCOPES",
     "TradingSettings",
     "default_config_path",
     "load_config",

@@ -1,7 +1,54 @@
 {
   "manifest_version": 1,
-  "updated_at_utc": "2026-10-13T18:04:33Z",
+  "updated_at_utc": "2026-10-13T18:26:02Z",
   "datasets": {
+    "classified:news:heegyu/news-category-dataset": {
+      "key": "classified:news:heegyu/news-category-dataset",
+      "name": "classified + scored news (POLITICS)",
+      "file": "data/processed/news_classified_news-category-dataset_politics.csv",
+      "sha256": "da4fbd221c35343374a0cbafbea5bec6cc4fd3d86ca01627f51bbd9b63daa702",
+      "size_bytes": 2615093,
+      "retrieved_at_utc": "2026-10-13T18:26:02Z",
+      "source": "https://huggingface.co/datasets/heegyu/news-category-dataset",
+      "url": null,
+      "dataset_id": "heegyu/news-category-dataset",
+      "revision": "304a05a55bc6abc0446d8fae0d0771716b6a271a",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "rows": 5930,
+      "columns": [
+        "article_id",
+        "published_at",
+        "available_from",
+        "headline",
+        "article_text",
+        "source",
+        "source_url",
+        "source_category",
+        "event_category",
+        "event_priority",
+        "matched_keywords",
+        "competing_categories",
+        "excluded_evidence",
+        "evidence_negated",
+        "conditional",
+        "classified_scope",
+        "matched_term_count",
+        "sentiment_label",
+        "sentiment_score",
+        "sentiment_terms",
+        "affected_sector"
+      ],
+      "date_coverage": [
+        "2018-01-01",
+        "2022-09-19"
+      ],
+      "notes": [
+        "Derived by nlp.classify_news from the Phase 1 cleaned table.",
+        "taxonomy_version=1.1; text_scope=headline; sentiment_mode=lexicon.",
+        "Labels are machine-generated baseline outputs, not human judgements."
+      ]
+    },
     "market:SPY:1d": {
       "key": "market:SPY:1d",
       "name": "SPY 1d OHLCV",

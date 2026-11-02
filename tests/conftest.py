@@ -47,6 +47,13 @@ BASE_CONFIG: dict[str, Any] = {
             "timestamp_precision": "day",
         },
     },
+    "nlp": {
+        "text_scope": "headline",
+        "taxonomy_version": "test-1",
+        "sentiment_mode": "lexicon",
+        "review_sample_size": 5,
+        "review_sample_seed": 3,
+    },
     "prediction": {"cutoff_time": "00:00", "target": "next_session_return_positive"},
     "trading": {"initial_capital": 100000.0, "transaction_cost_bps": 10.0, "position_fraction": 1.0},
 }
@@ -133,3 +140,35 @@ def market_provider_frame() -> pd.DataFrame:
 def news_subset_raw() -> pd.DataFrame:
     """Synthetic news rows as written by the interim subset step."""
     return pd.read_csv(NEWS_SUBSET_FIXTURE, dtype=str)
+
+
+#: Synthetic headlines, one per taxonomy category plus flagged evidence. Not real news:
+#: they exist so the Phase 2 expectations are exact and hand-checkable.
+CLASSIFIABLE_HEADLINES: tuple[tuple[str, str], ...] = (
+    ("conflict", "Missiles strike port as troops advance"),
+    ("sanctions", "EU imposes new sanctions on banks"),
+    ("tariffs", "U.S. announces tariffs on steel imports"),
+    ("pipeline", "Pipeline outage causes gas shortage in Europe"),
+    ("summit", "Leaders hold summit talks on security"),
+    ("council", "City council debates parking rules"),
+    ("threat", "Trump threatens tariffs on Chinese goods"),
+    ("denial", "No new sanctions expected, official says"),
+)
+
+
+@pytest.fixture
+def news_raw_classifiable() -> pd.DataFrame:
+    """Synthetic source-layout news table covering every event category."""
+    return pd.DataFrame(
+        [
+            {
+                "link": f"https://www.example.com/{slug}",
+                "headline": headline,
+                "category": "POLITICS",
+                "short_description": f"Description for {slug}.",
+                "authors": "Author",
+                "date": f"2020-01-{index + 1:02d}",
+            }
+            for index, (slug, headline) in enumerate(CLASSIFIABLE_HEADLINES)
+        ]
+    )

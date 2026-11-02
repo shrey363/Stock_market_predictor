@@ -16,7 +16,7 @@ Core research question: *does adding structured geopolitical-news features impro
 
 > **Simulation only. No live or real-money trading, ever. No financial advice. Never claim reliable prediction or profit.**
 
-**Current state:** Phase 1 complete. Ingestion, cleaning, and inspection exist in `src/stock_project/` with a pinned `requirements.txt`, and there is an **offline test suite: 73 tests, all passing** (`pytest` → `73 passed`). Cached data: 1,259 SPY sessions and 5,930 news articles; the Phase 1 artifact is `reports/experiment_results/phase1_data_report.json` and the dataset record is `docs/dataset_notes.md`. Phases 2–7 are **not started** — there is no classifier, no prediction model, no simulator, and no dashboard. Do not describe those as existing. Refresh this line whenever the state changes.
+**Current state:** Phase 1 complete; Phase 2 implemented but **not yet evaluated**. Ingestion, cleaning, inspection, the rule-based event classifier, the lexicon sentiment baseline, and an interactive labeller (`nlp/labeller.py`, loopback-only, blind by design) exist in `src/stock_project/` with a pinned `requirements.txt`, and there is an **offline test suite: 178 tests, all passing** (`pytest` → `178 passed`). Cached data: 1,259 SPY sessions and 5,930 classified news articles (96.3% fall to `other_or_uncertain`). Phase 2's metrics are **blocked on human labelling** of `data/annotations/news_review_sample.csv` — run the labeller with your own `--reviewer` name; never fill that column programmatically yourself and never report classifier metrics as if labels existed. Phases 3–7 are **not started**: no prediction model, no simulator, no dashboard. Refresh this line whenever the state changes.
 
 ## 2. Source-of-truth documents (read before acting)
 
