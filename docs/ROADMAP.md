@@ -117,6 +117,18 @@ Mirrors §19 of the specification — the project is complete when:
 
 Newest first. Every substantive action gets an entry: date, what changed, files touched, and verification.
 
+### 2026-11-02
+
+- **Fresh-checkout reproduction of Phases 1–2 (verification run; no source code changed).** Fast-forwarded the local checkout to `9d93293` (PR #1 `8f2f4b4`, PR #2 `9d93293`), created `.venv` from the pinned `requirements.txt`, and re-ran the documented pipeline end to end on this machine.
+  - `fetch_data`: 1,259 SPY sessions + the 87.3 MB pinned news snapshot → 5,930 rows.
+  - `inspect_data`: **all 10 Phase 1 checks PASS**.
+  - `classify_news`: distribution identical to the committed report — `other_or_uncertain` 5,709 (96.3%), largest/smallest ratio 951.5, sentiment 266 positive / 451 negative / 5,213 neutral.
+  - `evaluate_classifier`: writes the explicit "no labels yet" record; **0 of 200 rows labelled**.
+- **Files touched:** `data/manifest.json`, `reports/experiment_results/phase1_data_report.json`, `phase2_classification_report.json`, `phase2_classifier_evaluation.json` regenerated locally (fresh timestamps; the Phase 1 report now also captures the `nlp` config block added in Phase 2); raw/derived tables live under git-ignored `data/raw|interim|processed`. Left uncommitted for review.
+- **Provenance finding:** the raw SPY CSV is no longer byte-identical to the 2026-10-13 fetch — `sha256 65e9d3d5… → 1cef868b…`, 262,928 → 262,867 bytes — because Yahoo revises delivered history; session count (1,259), coverage and every check are unchanged. The news snapshot matches its pinned revision byte-for-byte.
+- **Verified:** `pytest` → **178 passed** (exit 0); all four Phase 1–2 CLIs exit 0 locally. Labeller started for the reviewer at `http://127.0.0.1:8391`.
+- **Still open (human step, unchanged):** Phase 2 boxes 2 and 4. 0/200 labels exist; the agent did not and may not fill the label column.
+
 ### 2026-10-14
 
 - **Fixed the labeller page rendering nothing but its header (JS `SyntaxError`)** — reported live: `/api/state` returned the article while `http://127.0.0.1:8391/` stayed blank. Cause: `PAGE` in `src/stock_project/nlp/labeller.py` is a Python string containing JS single-quoted strings with inline `onclick` handlers; lone `\'` sequences (`choose(\'…\')`, `act(\'/api/skip\')`, `act(\'/api/undo\')`) were collapsed by Python to bare `'`, so the browser received `choose('' …` — an unterminated string. Fix doubles the backslashes so the served HTML keeps valid JS escapes (`choose(\'…\')`). No API, sheet-format, or taxonomy change.

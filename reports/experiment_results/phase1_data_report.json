@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-10-13T18:04:33Z",
+  "generated_at_utc": "2026-11-02T13:43:09Z",
   "phase": 1,
   "phase_name": "Define and inspect data",
   "config": {
@@ -30,6 +30,13 @@
         "max_articles": 12000,
         "timestamp_precision": "day"
       }
+    },
+    "nlp": {
+      "text_scope": "headline",
+      "taxonomy_version": "1.1",
+      "sentiment_mode": "lexicon",
+      "review_sample_size": 200,
+      "review_sample_seed": 42
     },
     "prediction": {
       "cutoff_time": "00:00",
