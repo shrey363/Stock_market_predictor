@@ -1,6 +1,4 @@
-"""Deterministic historical trading simulator (Phase 5).
+"""Historical trading simulation and reinforcement-learning evaluation.
 
-Import from the module directly, e.g.
-``from stock_project.trading.simulator import run_simulation, SimulationSettings``.
-The Gymnasium wrapper and RL training arrive in Phase 6.
+Import concrete APIs from ``simulator``, ``gym_env`` or ``train_rl`` directly.
 """

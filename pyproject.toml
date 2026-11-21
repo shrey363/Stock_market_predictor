@@ -13,6 +13,9 @@ dependencies = [
     "scikit-learn",
     "PyYAML",
     "yfinance",
+    "gymnasium",
+    "stable-baselines3",
+    "Flask",
 ]
 
 [project.optional-dependencies]

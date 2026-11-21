@@ -20,5 +20,8 @@ scikit-learn==1.9.1
 gymnasium==1.2.1
 stable-baselines3==2.7.1
 
+# Read-only dashboard backend (Phase 7)
+Flask==3.1.2
+
 # Testing
 pytest==9.1.1

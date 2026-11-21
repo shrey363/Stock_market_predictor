@@ -70,8 +70,8 @@ Basic system architecture for the **Geopolitical Event-Aware Stock Market Predic
 | **Features** | `features/technical_indicators.py`, `features/news_features.py` | Session-level market indicators; news aggregation using only pre-cutoff articles; explicit no-news indicator |
 | **Models** | `models/train_baseline.py`, `train_news_aware.py`, `evaluate.py` | Naive baseline, market-only and market+news models with matched settings; chronological evaluation |
 | **Trading** | `trading/simulator.py`, `gym_env.py`, `train_rl.py` | Deterministic portfolio simulator, Gymnasium wrapper, SB3 training, benchmark strategies |
-| **Backend** | `backend/app.py` (Flask) | Read-only JSON API over saved datasets and experiment results |
-| **Frontend** | `frontend/` (React + Plotly) | Dashboard sections per §11 of the specification |
+| **Backend** | `src/stock_project/backend/app.py` (Flask) | Implemented read-only JSON API over saved datasets and experiment results; also serves the dashboard |
+| **Frontend** | `frontend/index.html` (React + Plotly) | Implemented single-page dashboard with all six specification sections and accessible table views |
 | **Common** | `common/` | Config loading, paths, logging, seeds |
 
 ## 3. Key design rules
@@ -99,7 +99,7 @@ Full field lists are in §6 of the specification. Summary of the two core tables
 
 Storage stays CSV/JSON on disk until a real need arises; MongoDB is explicitly a later option, not a default dependency.
 
-## 5. API surface (Planned, Phase 7)
+## 5. API surface (Implemented, Phase 7)
 
 | Endpoint | Returns |
 |---|---|
@@ -228,11 +228,13 @@ Artifact contract:
   rules as text, the period, per-strategy return/final value/trades/costs/max drawdown, thirteen
   pass/fail checks, and limitations.
 * `reports/experiment_results/phase5_portfolio_values.csv` — one equity row per strategy per
-  session (`strategy, session_date, action, executed, shares, cash, portfolio_value, ...`), so the
-  dashboard can draw every simulated portfolio without recomputing anything.
+  session (`strategy, session_date, action, executed, shares, cash, portfolio_value, ...`).
+* `reports/experiment_results/phase6_rl_report.json` — PPO protocol, validation-only candidate
+  selection, per-seed held-out metrics, benchmark comparison, 15 checks and limitations.
+* `reports/experiment_results/phase6_test_portfolio_values.csv` — one held-out equity row per
+  PPO seed and benchmark per session, consumed directly by `/simulation` and the dashboard.
 
 Paths inside every artifact are project-relative, so reports are diffable and portable. The
 backend/dashboard and later phases read these files — nothing re-derives numbers by hand.
 
-Not yet implemented (still target design): `trading/gym_env.py` and `trading/train_rl.py`,
-`backend/`, `frontend/`, and the RL experiment artifacts.
+Implemented through Phase 7: `trading/gym_env.py`, `trading/train_rl.py`, the Phase 6 experiment artifacts, `src/stock_project/backend/`, and `frontend/index.html`. The browser loads pinned React and Plotly builds from jsDelivr; API reads and all automated tests remain offline.

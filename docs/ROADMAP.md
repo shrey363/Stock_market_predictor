@@ -8,7 +8,7 @@ Living progress tracker for the **Geopolitical Event-Aware Stock Market Predicti
 - Setup and overview: [README.md](../README.md).
 - Target design: [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Overall status:** Phases 1–5 complete. **Phase 2 is evaluated** against 200 human labels; **Phase 5's deterministic simulator is implemented and verified.** **239/239 tests passing** (`pytest` → `239 passed`). Pipeline: `SPY` daily bars (1,259 sessions) → **1,209 feature rows** (10 market + 13 news features, 50 warm-up rows dropped) → chronological 846/181/182 split → naive majority, market-only, and market-plus-news logistic regression on the **same** held-out rows; separately, the tested simulator replays all 1,259 sessions for two benchmarks. **Headline honest results:** (1) Phase 2 rule classifier: accuracy 0.905 vs. naive 0.900 but **balanced accuracy 0.423** and kappa 0.270 — effectively an `other_or_uncertain` detector. (2) Market-only test balanced accuracy **0.506** vs. naive **0.500**; market+news **0.514** vs. **0.506** (ROC-AUC 0.525 vs. 0.532) — no distinguishable skill. (3) Simulator benchmarks: buy-and-hold **+42.53%** with one trade and 34.03% max drawdown; 5-session momentum **−33.13%** across 323 trades, with **31,227.96 of transaction costs** (about 31% of starting capital) — frequent trading is punished by costs, which is exactly what Phase 6 must beat. **Next action:** Phase 6 — Gymnasium environment + small RL agent evaluated against these benchmarks.
+**Overall status:** Phases 1–6 are implemented and verified; Phase 7's read-only Flask API and React + Plotly dashboard are implemented. The **5 new Phase 7 contract tests pass**; the last complete project-venv run before Phase 7 was **250/250 passing**, while the post-Phase-7 full-suite rerun is still required before final completion (a global-Anaconda run is invalid because it lacks Gymnasium). Pipeline: `SPY` daily bars (1,259 sessions) → 1,209 feature rows → chronological 846/181/182 split → supervised comparisons, deterministic simulation, and PPO. Honest results: the news classifier is weak on rare classes; market+news balanced accuracy **0.514** vs. market-only **0.506** is indistinguishable from noise; Phase 5 momentum loses **33.13%**; Phase 6 PPO averages **−4.94%** on the held-out period (seed range **+0.84% to −8.14%**) and is not reliably better than cash. **Next action:** run the complete suite in `.venv`, launch/inspect the dashboard, refresh Graphify, then mark Phase 7 and the project complete.
 
 ---
 
@@ -100,21 +100,21 @@ buy-and-hold **+42.53%** (1 trade, 99.64 costs, 34.03% max drawdown); momentum-5
 
 **Goal:** RL evaluation report with metrics and limitations.
 
-- [ ] Define observations (only information available at simulated time), actions, and reward.
-- [ ] Wrap the tested simulator in a Gymnasium-compatible environment.
-- [ ] Train a small agent with Stable-Baselines3.
-- [ ] Tune only on training/validation periods.
-- [ ] Evaluate on a separate chronological test period, across multiple seeds where practical.
-- [ ] Report cumulative return, Sharpe ratio (documented frequency), max drawdown, trade count, costs — against buy-and-hold and the rule-based strategy.
+- [x] Define observations (only information available at simulated time), actions, and reward. — 23 pre-cutoff features plus holding flag and cash fraction; hold/buy/sell; step portfolio return after costs.
+- [x] Wrap the tested simulator in a Gymnasium-compatible environment. — `trading/gym_env.py` delegates all accounting to the Phase 5 simulator and passes Gymnasium contract/leakage tests.
+- [x] Train a small agent with Stable-Baselines3. — PPO, two-candidate validation grid, 50,000 timesteps per fit.
+- [x] Tune only on training/validation periods. — candidates train on 846 rows and select on 181 validation rows; test is untouched.
+- [x] Evaluate on a separate chronological test period, across multiple seeds where practical. — seeds 0/1/2 on 182 held-out sessions, 2022-04-12…2022-12-30.
+- [x] Report cumulative return, Sharpe ratio (documented frequency), max drawdown, trade count, costs — against buy-and-hold and the rule-based strategy. — all 15 artifact checks pass; PPO mean −4.94%, buy-and-hold −13.75%, momentum −25.03%, cash 0%; seed spread is reported rather than hidden.
 
 ## Phase 7 — Dashboard and final integration
 
 **Goal:** working demo and final project report.
 
-- [ ] Expose data, predictions, comparisons, and simulation results through Flask.
-- [ ] Build the React + Plotly dashboard (or agreed alternative).
-- [ ] Sections: market overview, news explorer, prediction view, model comparison, trading simulation, methodology & limitations.
-- [ ] Test the complete workflow from input data to displayed results; verify dashboard values match saved experiment outputs.
+- [x] Expose data, predictions, comparisons, and simulation results through Flask. — six read-only endpoints consume saved Phase 1–6 CSV/JSON artifacts; requests never train or simulate.
+- [x] Build the React + Plotly dashboard (or agreed alternative). — one responsive `frontend/index.html`, served by Flask; no Node build chain.
+- [x] Sections: market overview, news explorer, prediction view, model comparison, trading simulation, methodology & limitations.
+- [x] Test the complete workflow from input data to displayed results; verify dashboard values match saved experiment outputs. — five focused tests pass for exact API values, all routes, read-only methods, filters/pagination, missing artifacts, and required dashboard sections. Full-suite and browser smoke remain the final completion gate.
 - [ ] Document setup, reproduction commands, and limitations in the README.
 - [ ] Compile the final report including failed experiments and honest caveats.
 
@@ -142,6 +142,8 @@ Newest first. Every substantive action gets an entry: date, what changed, files 
 
 ### 2026-11-21
 
+- **Phase 7 integration implemented; final verification remains open.** Added `src/stock_project/backend/app.py` + `__init__.py`, `frontend/index.html`, and `tests/test_backend.py`; added pinned Flask and completed the stale Phase 6 package description. Six GET-only endpoints serve saved market/news/prediction/model/simulation/methodology artifacts, and the single-file React + Plotly dashboard renders all required sections with tables and explicit responsible-use caveats. **Focused verification:** `pytest tests/test_backend.py -q` → **5 passed**. `git diff --check` passes. A full run from global Anaconda is invalid (missing Gymnasium) and also exposes an unrelated Pandas-width dtype assertion, so it is not recorded as project verification; rerun from `.venv` remains required before ticking the final documentation/report boxes or Definition of Done.
+- **Phase 6 implemented and verified.** Added the Gymnasium environment and PPO protocol. Corrected Phase 6 suite: **9 passed**; complete project-venv suite at that point: **250 passed**. The real experiment selected `ppo_reactive`; all **15 checks pass** on 182 held-out sessions. PPO seeds returned +0.84%, −8.14%, and −7.54% (mean −4.94%), versus buy-and-hold −13.75%, momentum −25.03%, and cash 0%. The seed spread and failure to reliably beat cash are retained as the headline result, not hidden.
 - **Phase 5 implemented and verified: a deterministic trading simulator plus buy-and-hold and momentum benchmarks.** All five Phase 5 checklist items ticked.
   - **Engine (`trading/simulator.py`):** `PortfolioSimulator` with cash/shares state and `step(action, open, close)`. A session's action is decided pre-open, filled at that session's **open**, and the portfolio is marked at the **close**. `hold` does nothing; `buy` opens a long position only when flat; `sell` closes the entire position. Long-only, one position, no pyramiding or shorting. A buy spends `position_fraction` of equity in whole shares, capped by available cash including the cost. Costs are `notional × transaction_cost_bps / 10_000` on both sides; cash can never go negative, and an unaffordable or redundant action executes nothing and records a reason.
   - **Benchmarks:** `buy_and_hold_actions()` (one entry) and `momentum_actions(window=5)` (buy when the previous close is above its trailing mean, else sell). The momentum rule reads only closes up to `t-1`; a leakage test mutates a session's own close and asserts its action is unchanged.
