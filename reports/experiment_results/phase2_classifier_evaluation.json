@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-11-02T13:46:06Z",
+  "generated_at_utc": "2026-11-21T12:13:19Z",
   "phase": 2,
   "taxonomy_version": "1.1",
   "config": {
@@ -38,6 +38,36 @@
       "review_sample_size": 200,
       "review_sample_seed": 42
     },
+    "features": {
+      "return_windows": [
+        1,
+        5,
+        20
+      ],
+      "moving_average_windows": [
+        10,
+        50
+      ],
+      "rsi_window": 14,
+      "volatility_window": 20,
+      "volume_window": 20,
+      "news_lookback_days": 7
+    },
+    "splits": {
+      "train_fraction": 0.7,
+      "validation_fraction": 0.15
+    },
+    "model": {
+      "type": "logistic_regression",
+      "c_values": [
+        0.01,
+        0.1,
+        1.0,
+        10.0
+      ],
+      "max_iter": 2000,
+      "selection_metric": "balanced_accuracy"
+    },
     "prediction": {
       "cutoff_time": "00:00",
       "target": "next_session_return_positive"
@@ -55,13 +85,210 @@
   "primary_sheet": {
     "sheet": "data/annotations/news_review_sample.csv",
     "rows_in_sheet": 200,
-    "labelled_rows": 0,
-    "unreviewed_rows": 200,
-    "reviewers": [],
-    "metrics": null,
-    "naive_majority_baseline": null,
-    "error_patterns": null,
-    "note": "No labels yet: the sheet is empty until a human reviews it. No metrics were computed."
+    "labelled_rows": 200,
+    "unreviewed_rows": 0,
+    "reviewers": [
+      "sodium16"
+    ],
+    "observed_label_distribution": {
+      "other_or_uncertain": 180,
+      "diplomatic_development": 15,
+      "sanctions": 2,
+      "armed_conflict": 2,
+      "trade_restriction": 1
+    },
+    "metrics": {
+      "n_evaluated": 200,
+      "per_class": {
+        "armed_conflict": {
+          "precision": 0.5,
+          "recall": 0.5,
+          "f1": 0.5,
+          "support": 2,
+          "predicted": 2
+        },
+        "sanctions": {
+          "precision": 1.0,
+          "recall": 0.5,
+          "f1": 0.666667,
+          "support": 2,
+          "predicted": 1
+        },
+        "trade_restriction": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 1,
+          "predicted": 1
+        },
+        "energy_or_supply_disruption": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 0,
+          "predicted": 0
+        },
+        "diplomatic_development": {
+          "precision": 0.666667,
+          "recall": 0.133333,
+          "f1": 0.222222,
+          "support": 15,
+          "predicted": 3
+        },
+        "other_or_uncertain": {
+          "precision": 0.917098,
+          "recall": 0.983333,
+          "f1": 0.949062,
+          "support": 180,
+          "predicted": 193
+        }
+      },
+      "accuracy": 0.905,
+      "balanced_accuracy": 0.423333,
+      "cohen_kappa": 0.270353,
+      "macro_average": {
+        "precision": 0.616753,
+        "recall": 0.423333,
+        "f1": 0.46759,
+        "labels_used": [
+          "armed_conflict",
+          "sanctions",
+          "trade_restriction",
+          "diplomatic_development",
+          "other_or_uncertain"
+        ],
+        "labels_excluded_no_support": [
+          "energy_or_supply_disruption"
+        ]
+      },
+      "weighted_average": {
+        "precision": 0.890389,
+        "recall": 0.905,
+        "f1": 0.882489
+      },
+      "confusion_matrix": {
+        "rows": "true label",
+        "columns": "predicted label",
+        "labels": [
+          "armed_conflict",
+          "sanctions",
+          "trade_restriction",
+          "energy_or_supply_disruption",
+          "diplomatic_development",
+          "other_or_uncertain"
+        ],
+        "matrix": [
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            1,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            2,
+            13
+          ],
+          [
+            1,
+            0,
+            1,
+            0,
+            1,
+            177
+          ]
+        ]
+      },
+      "classes_without_support": [
+        "energy_or_supply_disruption"
+      ],
+      "classes_never_predicted": [
+        "energy_or_supply_disruption"
+      ],
+      "notes": [
+        "Accuracy is reported alongside balanced accuracy because the classes are imbalanced.",
+        "Classes with zero support cannot be evaluated: their precision/recall are shown as 0.0 and must not be read as failures.",
+        "Balanced accuracy is the mean recall over the labels present in the sample (macro recall).",
+        "Macro averages use only the 5 label(s) present in this sample: ['armed_conflict', 'sanctions', 'trade_restriction', 'diplomatic_development', 'other_or_uncertain']."
+      ]
+    },
+    "naive_majority_baseline": {
+      "class": "other_or_uncertain",
+      "accuracy": 0.9,
+      "note": "Under imbalance this baseline can look strong; compare macro/balanced metrics, not just accuracy."
+    },
+    "error_patterns": {
+      "error_count": 19,
+      "top_confusions": [
+        {
+          "true": "diplomatic_development",
+          "predicted": "other_or_uncertain",
+          "count": 13
+        },
+        {
+          "true": "armed_conflict",
+          "predicted": "other_or_uncertain",
+          "count": 1
+        },
+        {
+          "true": "other_or_uncertain",
+          "predicted": "armed_conflict",
+          "count": 1
+        },
+        {
+          "true": "other_or_uncertain",
+          "predicted": "diplomatic_development",
+          "count": 1
+        },
+        {
+          "true": "other_or_uncertain",
+          "predicted": "trade_restriction",
+          "count": 1
+        },
+        {
+          "true": "sanctions",
+          "predicted": "other_or_uncertain",
+          "count": 1
+        },
+        {
+          "true": "trade_restriction",
+          "predicted": "other_or_uncertain",
+          "count": 1
+        }
+      ],
+      "errors_with_negated_evidence": 0,
+      "errors_with_conditional_evidence": 0,
+      "errors_where_baseline_found_no_keyword": 16
+    }
   },
   "additional_sheets": {
     "focus_sheet": {
@@ -70,14 +297,14 @@
       "note": "not labelled yet"
     }
   },
-  "misclassifications_file": null,
+  "misclassifications_file": "reports/experiment_results/phase2_misclassifications.csv",
   "limitations": [
     "Metrics describe this labelled sample only; they are not an estimate for future articles.",
-    "200 row(s) in the sheet are unreviewed and were excluded, not counted as correct.",
+    "0 row(s) in the sheet are unreviewed and were excluded, not counted as correct.",
     "Labelled articles come from one publisher category, so the sample is not representative of all news.",
     "Classification uses the headline (or headline+description) only; body text is not available in this dataset.",
     "Per-class numbers for classes with few labels are unstable; treat small-support rows as indicative only.",
     "This is a baseline, not a validated model: a result close to the naive baseline is a valid outcome to report."
   ],
-  "next_step": "Label data/annotations/news_review_sample.csv by hand (rules: docs/annotation_guidelines.md), then re-run this command to compute precision/recall/F1. Phase 3 comes after that."
+  "next_step": "Phase 3 - market features and the market-only baseline, using these labels where they help."
 }

@@ -108,13 +108,13 @@ def classification_metrics(
     return metrics
 
 
-def _majority_class(train_target: pd.Series) -> int:
+def majority_class(train_target: pd.Series) -> int:
     """Most frequent training label; a tie is broken toward the positive class."""
     counts = train_target.value_counts()
     return 1 if int(counts.get(1, 0)) >= int(counts.get(0, 0)) else 0
 
 
-def _fit_logistic(
+def fit_logistic(
     train_features: pd.DataFrame,
     train_target: pd.Series,
     *,
@@ -136,7 +136,7 @@ def _fit_logistic(
     return pipeline
 
 
-def _probabilities(pipeline: Pipeline, features: pd.DataFrame) -> pd.Series:
+def probabilities(pipeline: Pipeline, features: pd.DataFrame) -> pd.Series:
     return pd.Series(pipeline.predict_proba(features)[:, 1], index=features.index)
 
 
@@ -185,16 +185,16 @@ def run_baseline(config: Config, *, root: Path | None = None, write: bool = True
     test_features = features.iloc[split.test.start : split.test.stop][feature_columns]
     test_target = features.iloc[split.test.start : split.test.stop]["target"]
 
-    majority = _majority_class(train_target)
+    majority = majority_class(train_target)
     naive_test = classification_metrics(test_target, pd.Series([majority] * len(test_target)))
 
     selection: list[dict[str, Any]] = []
     best_c = None
     best_score = None
     for c in config.model.c_values:
-        candidate = _fit_logistic(train_features, train_target, c=c, max_iter=config.model.max_iter, seed=config.project.random_seed)
+        candidate = fit_logistic(train_features, train_target, c=c, max_iter=config.model.max_iter, seed=config.project.random_seed)
         candidate_metrics = classification_metrics(
-            validation_target, candidate.predict(validation_features), _probabilities(candidate, validation_features)
+            validation_target, candidate.predict(validation_features), probabilities(candidate, validation_features)
         )
         score = candidate_metrics[config.model.selection_metric]
         selection.append({"c": float(c), "validation": candidate_metrics})
@@ -208,9 +208,9 @@ def run_baseline(config: Config, *, root: Path | None = None, write: bool = True
     # held-out period exactly once.
     fit_features = pd.concat([train_features, validation_features])
     fit_target = pd.concat([train_target, validation_target])
-    final_model = _fit_logistic(fit_features, fit_target, c=best_c, max_iter=config.model.max_iter, seed=config.project.random_seed)
+    final_model = fit_logistic(fit_features, fit_target, c=best_c, max_iter=config.model.max_iter, seed=config.project.random_seed)
 
-    test_probability = _probabilities(final_model, test_features)
+    test_probability = probabilities(final_model, test_features)
     test_prediction = pd.Series(final_model.predict(test_features), index=test_features.index)
     model_test = classification_metrics(test_target, test_prediction, test_probability)
     chosen_validation = next(entry["validation"] for entry in selection if entry["c"] == best_c)

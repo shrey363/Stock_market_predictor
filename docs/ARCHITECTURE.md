@@ -1,6 +1,6 @@
 # Architecture
 
-Basic system architecture for the **Geopolitical Event-Aware Stock Market Prediction and Trading** project. This describes the *target* design; components are implemented phase by phase per [ROADMAP.md](ROADMAP.md). **Phases 1–3 are implemented** — ingestion, cleaning, inspection, event classification, sentiment scoring, the review/evaluation tooling, market feature engineering, chronological splitting, and the naive plus market-only baselines live in `src/stock_project/` (§10 lists exactly what exists). Phase 2's **evaluation is pending human labels**, and the `trading/`, `backend/`, and `frontend/` layers are still target design.
+Basic system architecture for the **Geopolitical Event-Aware Stock Market Prediction and Trading** project. This describes the *target* design; components are implemented phase by phase per [ROADMAP.md](ROADMAP.md). **Phases 1–4 are implemented** — ingestion, cleaning, inspection, event classification, sentiment scoring, the review/evaluation tooling, market feature engineering, pre-cutoff news aggregation, chronological splitting, and the naive plus market-only baselines, plus the market-plus-news comparison, live in `src/stock_project/` (§10 lists exactly what exists). Phase 2's classifier has been **evaluated against 200 human labels** (weak on rare categories: balanced accuracy 0.423, kappa 0.270), and the `trading/`, `backend/`, and `frontend/` layers are still target design.
 
 - Specification: [PROJECT_DESCRIPTION.md](../PROJECT_DESCRIPTION.md)
 - Overview and setup: [README.md](../README.md)
@@ -95,7 +95,7 @@ Full field lists are in §6 of the specification. Summary of the two core tables
 - **Filtered news subset (interim, implemented):** `link, headline, category, short_description, authors, date` — the source columns for one publisher category inside the configured window, before validation.
 - **Classified news table (processed, implemented):** the Phase 1 contract plus `event_category, event_priority, matched_keywords, competing_categories, excluded_evidence, evidence_negated, conditional, classified_scope, matched_term_count, sentiment_label, sentiment_score, sentiment_terms`. Machine-generated baseline outputs — never presented as human labels. `event_category` is written by the classifier; the *human* label column lives only in `data/annotations/`.
 - **Review sheets (annotations, implemented):** `article_id, published_at, headline, source, source_category, sampling_reason, event_category, reviewer, reviewed_at, notes` — the label column is written empty and filled only by a human. `data/annotations/` is committed because hand labelling is expensive work that must not be lost or overwritten.
-- **Feature table (processed, implemented for the market-only case):** `symbol, session_date, decision_time_utc, news_cutoff_utc`, market features, then `next_session_return, target`. One row per predicted session. Market features (Phase 3): `return_{1,5,20}d, sma_ratio_{10,50}, rsi_14, volatility_20, volume_ratio_20, intraday_range, overnight_gap` — each evaluated at the close of its bar and shifted forward one row, so the row for session `t` uses bars up to and including `t-1` only. `target = 1` when that session closes above the previous close. Warm-up rows are dropped and counted, never filled. The news columns (per-category counts, mean sentiment, pos/neg/neutral counts, time since last relevant article, `no_news`) arrive in Phase 4, keyed to `news_cutoff_utc`.
+- **Feature table (processed, implemented):** `symbol, session_date, decision_time_utc, news_cutoff_utc`, market features, news features, then `next_session_return, target`. One row per predicted session. Market features (Phase 3): `return_{1,5,20}d, sma_ratio_{10,50}, rsi_14, volatility_20, volume_ratio_20, intraday_range, overnight_gap` — each evaluated at the close of its bar and shifted forward one row, so the row for session `t` uses bars up to and including `t-1` only. News features (Phase 4): `news_count_total`, `news_count_<category>` (one per taxonomy category), `news_positive_count`, `news_negative_count`, `news_neutral_count`, `news_sentiment_sum`, `news_days_since_last`, `no_news`. Only articles with `available_from` in `(news_cutoff_utc - news_lookback_days, news_cutoff_utc]` are aggregated; with no article the counts and sentiment sum are zero, `news_days_since_last` is the capped lookback, and `no_news = 1` — sentiment is never imputed as neutral (it is a sum, not a mean, for exactly this reason). `target = 1` when that session closes above the previous close. Warm-up rows are dropped and counted, never filled.
 
 Storage stays CSV/JSON on disk until a real need arises; MongoDB is explicitly a later option, not a default dependency.
 
@@ -137,9 +137,9 @@ Every rule in §3 has (or will have) an explicit, offline test — a comment is 
 |---|---|---|
 | Chronological splits | Train/validation/test date ranges are strictly ordered and disjoint; no shuffling anywhere in the path (`test_chronological_splits`, `test_train_baseline`) | Phase 3 — done |
 | Prediction cutoff (market) | Mutating prices at or after session `t` leaves row `t`'s features unchanged, while mutating earlier prices does change them (`test_mutating_the_predicted_session_leaves_its_features_untouched`, `test_features_do_depend_on_earlier_prices`) | Phase 3 — done |
-| Prediction cutoff (news) | Adding/changing a news row published after the cutoff leaves that session's feature row unchanged | Phase 4 |
-| No silent fills | Phase 1: per-column missing counts are reported, no value is imputed or forward-filled, and label columns stay empty. Phase 4: a session with no pre-cutoff articles gets all-zero counts **and** `no_news = 1` | Phase 1, completed in Phase 4 |
-| Day-level news timestamps | Every cleaned article has `available_from = published_at + 1 day`, so a same-day cutoff cannot leak post-cutoff news | Phase 1 (guard), consumed in Phase 4 |
+| Prediction cutoff (news) | Adding/changing a news row published after the cutoff leaves that session's feature row unchanged (`test_post_cutoff_articles_cannot_change_a_session_row`) | Phase 4 — done |
+| No silent fills | Phase 1: per-column missing counts are reported, no value is imputed or forward-filled, and label columns stay empty. Phase 4: a session with no pre-cutoff article gets all-zero counts **and** `no_news = 1`, with no sentiment value imputed (`test_session_without_news_is_explicit_not_imputed`) | Phase 1, completed in Phase 4 — done |
+| Day-level news timestamps | Every cleaned article has `available_from = published_at + 1 day`, so a same-day cutoff cannot leak post-cutoff news; the aggregation window is tested at both boundaries (`test_window_is_strictly_after_start_and_inclusive_at_cutoff`, `test_day_precision_news_published_the_day_before_is_usable`) | Phase 1 (guard), consumed and tested in Phase 4 |
 | Traceability | Every classified article still carries `article_id`, text, timestamp, and source, plus the matched keywords, competing categories, and vetoed evidence behind its label | Phase 2 (asserted in `test_clean_news_data`, `test_classify_news`) |
 | No invented labels | The classifier writes machine labels only into the processed table; the human review sheet's label column is written empty, unreviewed rows are counted separately from correct ones, and a label outside the taxonomy is a hard error. The labeller only ever writes what a reviewer pressed, keeps skips blank, logs every change to an append-only JSONL file, and serves the reviewer context columns only — never the prediction | Phase 2 (`test_annotate`, `test_evaluate_classifier`, `test_labeller`) |
 | Simulator determinism | Replaying identical prices + costs + actions yields identical cash, positions, and portfolio value (hand-checked numeric fixtures) | Phase 5 |
@@ -163,7 +163,7 @@ common  →  data  →  preprocessing  →  nlp / features  →  models / tradin
 
 Cross-layer imports that skip or reverse this order are a design bug even when the code runs — restructure or route through `common/` instead.
 
-## 10. Implementation status (Phases 1–3)
+## 10. Implementation status (Phases 1–4)
 
 Implemented and tested:
 
@@ -188,8 +188,10 @@ Implemented and tested:
 | `nlp/labeller.py` | CLI + loopback-only HTTP UI: one headline at a time, keyboard shortcuts, atomic sheet writes, undo, and an append-only `<sheet>_labelling_log.jsonl` audit trail; blind by construction |
 | `nlp/evaluate_classifier.py` | CLI: per-class precision/recall/F1, balanced accuracy, kappa, naive baseline, error listing — `phase2_classifier_evaluation.json` |
 | `features/technical_indicators.py` | Returns, SMA distance, Wilder RSI, rolling volatility, volume ratio, intraday range, overnight gap — all shifted forward one row so the cutoff is structural; builds the target and writes the feature table |
+| `features/news_features.py` | Pre-cutoff news aggregation per session: category counts, positive/negative/neutral counts, sentiment sum, recency (capped), explicit `no_news`; unknown categories/labels and unparsable timestamps are hard errors |
 | `features/chronological_splits.py` | Ordered train/validation/test ranges (`int()` floor, deterministic) plus per-period rows, dates and class balance; no purge gap is needed because no row depends on another period |
 | `models/train_baseline.py` | CLI: naive majority baseline + `StandardScaler`+`LogisticRegression`, C chosen on validation only, refit on train+validation, one held-out test evaluation; metrics, standardised coefficients, eight pass/fail checks |
+| `models/train_news_aware.py` | CLI: same model family on market-only and market+news features over the identical split, C grid and test rows; comparison report, joint predictions, ten pass/fail checks |
 
 Artifact contract:
 
@@ -211,11 +213,19 @@ Artifact contract:
 * `reports/experiment_results/phase3_test_predictions.csv` — one row per held-out session
   (`session_date, decision_time_utc, next_session_return, target, probability_up, prediction,
   correct`), so every reported test number traces to a date and a probability.
-* `data/processed/features_<SYMBOL>_<interval>.csv` — the feature table itself, also recorded in
-  `data/manifest.json` with its row/column contract.
+* `reports/experiment_results/phase4_news_comparison_report.json` — config snapshot, cutoff and
+  news-window rules, market and news feature definitions, the `no_news` share, split ranges with
+  dates and class balance, market-only and market-plus-news metrics, both selected C values,
+  standardised coefficients (all features), ten pass/fail checks, comparison deltas and limitations.
+* `reports/experiment_results/phase4_test_predictions.csv` — one row per held-out session with both
+  models' probabilities and predictions, so every comparison number traces to a date.
+* `data/processed/features_<SYMBOL>_<interval>.csv` — the market-only feature table, recorded in
+  `data/manifest.json`.
+* `data/processed/features_<SYMBOL>_<interval>_news.csv` — the combined market + news feature
+  store, also recorded in `data/manifest.json` with its row/column contract.
 
 Paths inside every artifact are project-relative, so reports are diffable and portable. The
 backend/dashboard and later phases read these files — nothing re-derives numbers by hand.
 
-Not yet implemented (still target design): `trading/`, `backend/`, `frontend/`, the news feature
-aggregation (`features/news_features.py`), the market+news comparison, and the RL experiment artifacts.
+Not yet implemented (still target design): `trading/`, `backend/`, `frontend/`, and the RL
+experiment artifacts.

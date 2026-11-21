@@ -194,7 +194,7 @@ to apply).
 | `data/processed/news_classified_news-category-dataset_politics.csv` | 5,930 / 2.5 MB | no (git-ignored) | `nlp.classify_news` |
 | `data/annotations/news_review_sample.csv` | 200 | **yes** | `nlp.annotate` |
 | `data/annotations/news_review_focus.csv` | 60 | **yes** | `nlp.annotate` |
-| `data/annotations/news_review_sample_labelling_log.jsonl` | 0 rows until labelling starts | **yes** | `nlp.labeller` |
+| `data/annotations/news_review_sample_labelling_log.jsonl` | 254 entries (labels, skips, undos) | **yes** | `nlp.labeller` |
 | `reports/experiment_results/phase2_classification_report.json` | 24 KB | **yes** | `nlp.classify_news` |
 | `reports/experiment_results/phase2_annotation_sheets.json` | 2 KB | **yes** | `nlp.annotate` |
 | `reports/experiment_results/phase2_classifier_evaluation.json` | 3 KB | **yes** | `nlp.evaluate_classifier` |
@@ -205,13 +205,17 @@ Machine labels written (taxonomy v1.1, headline scope): `other_or_uncertain` 5,7
 never presented as human labels. Sentiment (lexicon baseline): 266 positive, 451 negative,
 5,213 neutral, mean −0.031.
 
-Human labels: **none yet.** The review sheets ship with an empty `event_category` column and
-no prediction visible, and `phase2_classifier_evaluation.json` states that no metrics were
-computed rather than reporting placeholder numbers. Labelling is done with
-`python -m stock_project.nlp.labeller --reviewer "<name>"`, which writes only what a reviewer
-pressed (skips stay blank), rejects anything outside the taxonomy, and appends every change to
-the audit log above. `data/annotations/` is committed so the labelling work cannot be lost;
-derived data stays git-ignored because it regenerates from the commands below.
+Human labels: **200/200 rows of the random review sample are labelled** by reviewer `sodium16`
+(distribution: `other_or_uncertain` 180, `diplomatic_development` 15, `sanctions` 2,
+`armed_conflict` 2, `trade_restriction` 1, `energy_or_supply_disruption` 0). Labels were written
+only through `python -m stock_project.nlp.labeller --reviewer "<name>"`, which records what the
+reviewer pressed (skips stay blank), rejects anything outside the taxonomy, and appends every
+change to the audit log above; `data/annotations/` is committed so the labelling work cannot be
+lost. `phase2_classifier_evaluation.json` holds the resulting metrics: accuracy 0.905 (naive
+majority 0.900), balanced accuracy 0.423, macro F1 0.468, Cohen's kappa 0.270, 19 errors — the
+rule classifier is accurate on the majority class and weak on rare categories. The 60-row focus
+sheet remains unlabelled (an optional stratified hard-case aid). Derived data stays git-ignored
+because it regenerates from the commands below.
 
 ### Reproducing Phase 2
 

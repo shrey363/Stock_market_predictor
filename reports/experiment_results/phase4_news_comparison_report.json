@@ -1,0 +1,741 @@
+{
+  "generated_at_utc": "2026-11-21T12:15:16Z",
+  "phase": 4,
+  "phase_name": "Add geopolitical features",
+  "config": {
+    "config_path": "configs/config.example.yaml",
+    "project": {
+      "name": "geopolitical-stock-predictor",
+      "random_seed": 42
+    },
+    "data": {
+      "market": {
+        "symbol": "SPY",
+        "start": "2018-01-01",
+        "end": "2022-12-31",
+        "interval": "1d",
+        "timezone": "UTC",
+        "source": "Yahoo Finance via yfinance (research/educational use; see docs/dataset_notes.md)"
+      },
+      "news": {
+        "dataset_id": "heegyu/news-category-dataset",
+        "revision": "304a05a55bc6abc0446d8fae0d0771716b6a271a",
+        "source_file": "data.json",
+        "license": "CC BY 4.0",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "dataset_url": "https://huggingface.co/datasets/heegyu/news-category-dataset",
+        "source_category_filter": "POLITICS",
+        "start": "2018-01-01",
+        "end": "2022-12-31",
+        "max_articles": 12000,
+        "timestamp_precision": "day"
+      }
+    },
+    "nlp": {
+      "text_scope": "headline",
+      "taxonomy_version": "1.1",
+      "sentiment_mode": "lexicon",
+      "review_sample_size": 200,
+      "review_sample_seed": 42
+    },
+    "features": {
+      "return_windows": [
+        1,
+        5,
+        20
+      ],
+      "moving_average_windows": [
+        10,
+        50
+      ],
+      "rsi_window": 14,
+      "volatility_window": 20,
+      "volume_window": 20,
+      "news_lookback_days": 7
+    },
+    "splits": {
+      "train_fraction": 0.7,
+      "validation_fraction": 0.15
+    },
+    "model": {
+      "type": "logistic_regression",
+      "c_values": [
+        0.01,
+        0.1,
+        1.0,
+        10.0
+      ],
+      "max_iter": 2000,
+      "selection_metric": "balanced_accuracy"
+    },
+    "prediction": {
+      "cutoff_time": "00:00",
+      "target": "next_session_return_positive"
+    },
+    "trading": {
+      "initial_capital": 100000.0,
+      "transaction_cost_bps": 10.0,
+      "position_fraction": 1.0
+    }
+  },
+  "inputs": {
+    "market_table": "data/processed/market_SPY_1d_clean.csv",
+    "market_rows": 1259,
+    "classified_news_table": "data/processed/news_classified_news-category-dataset_politics.csv",
+    "news_articles": 5930,
+    "news_available_from_range": [
+      "2018-01-02",
+      "2022-09-20"
+    ],
+    "features_table": "data/processed/features_SPY_1d_news.csv"
+  },
+  "cutoff": {
+    "decision_rule": "A row for session t is decided at that session's timestamp and every market feature uses bars up to and including t-1 only; values are computed at the close of their bar and shifted forward one row.",
+    "news_rule": "news_cutoff_utc = session date at 00:00 UTC. Only articles whose available_from falls in (news_cutoff_utc - 7 day(s), news_cutoff_utc] are aggregated; day-precision news published the day before at the latest is therefore usable.",
+    "target": "target = 1 when close[t] > close[t-1] for the predicted session t; next_session_return records the exact return it was derived from."
+  },
+  "features": {
+    "market_columns": [
+      "return_1d",
+      "return_5d",
+      "return_20d",
+      "sma_ratio_10",
+      "sma_ratio_50",
+      "rsi_14",
+      "volatility_20",
+      "volume_ratio_20",
+      "intraday_range",
+      "overnight_gap"
+    ],
+    "news_columns": [
+      "news_count_total",
+      "news_count_armed_conflict",
+      "news_count_sanctions",
+      "news_count_trade_restriction",
+      "news_count_energy_or_supply_disruption",
+      "news_count_diplomatic_development",
+      "news_count_other_or_uncertain",
+      "news_positive_count",
+      "news_negative_count",
+      "news_neutral_count",
+      "news_sentiment_sum",
+      "news_days_since_last",
+      "no_news"
+    ],
+    "market_definitions": {
+      "return_1d": "close[t-1] / close[t-1-1] - 1 (simple return over 1 session(s), known at close t-1)",
+      "return_5d": "close[t-1] / close[t-1-5] - 1 (simple return over 5 session(s), known at close t-1)",
+      "return_20d": "close[t-1] / close[t-1-20] - 1 (simple return over 20 session(s), known at close t-1)",
+      "sma_ratio_10": "close[t-1] / mean(close[t-10 .. t-1]) - 1 at close t-1",
+      "sma_ratio_50": "close[t-1] / mean(close[t-50 .. t-1]) - 1 at close t-1",
+      "rsi_14": "Wilder RSI(14) on closes up to t-1",
+      "volatility_20": "stdev(ddof=1) of simple returns over 20 sessions ending at t-1 (not annualised)",
+      "volume_ratio_20": "volume[t-1] / mean(volume[t-20 .. t-1]) at close t-1",
+      "intraday_range": "(high - low) / close at t-1",
+      "overnight_gap": "open[t-1] / close[t-2] - 1 (gap into session t-1)"
+    },
+    "news_definitions": {
+      "news_count_total": "number of usable articles with available_from in (cutoff - 7 day(s), cutoff]",
+      "news_count_armed_conflict": "number of usable armed_conflict articles with available_from in (cutoff - 7 day(s), cutoff]",
+      "news_count_sanctions": "number of usable sanctions articles with available_from in (cutoff - 7 day(s), cutoff]",
+      "news_count_trade_restriction": "number of usable trade_restriction articles with available_from in (cutoff - 7 day(s), cutoff]",
+      "news_count_energy_or_supply_disruption": "number of usable energy_or_supply_disruption articles with available_from in (cutoff - 7 day(s), cutoff]",
+      "news_count_diplomatic_development": "number of usable diplomatic_development articles with available_from in (cutoff - 7 day(s), cutoff]",
+      "news_count_other_or_uncertain": "number of usable other_or_uncertain articles with available_from in (cutoff - 7 day(s), cutoff]",
+      "news_positive_count": "articles labelled positive with available_from in (cutoff - 7 day(s), cutoff]",
+      "news_negative_count": "articles labelled negative with available_from in (cutoff - 7 day(s), cutoff]",
+      "news_neutral_count": "articles labelled neutral with available_from in (cutoff - 7 day(s), cutoff]",
+      "news_sentiment_sum": "sum of sentiment_score over articles with available_from in (cutoff - 7 day(s), cutoff]",
+      "news_days_since_last": "days from the most recent usable article's available_from to the cutoff, capped at 7; 7 when no article exists at or before the cutoff",
+      "no_news": "1 when no usable article falls in (cutoff - 7 day(s), cutoff], else 0 (never imputed as neutral sentiment)"
+    },
+    "news_lookback_days": 7,
+    "warmup_rows_dropped": 50,
+    "sessions_without_news": 118,
+    "sessions_without_news_share": 0.097601,
+    "notes": [
+      "50 leading row(s) dropped: the indicators' warm-up window is not yet full; nothing was imputed",
+      "every feature is computed from bars up to and including t-1 and shifted forward one row, so session t itself cannot influence its own row (invariant 2)",
+      "target = 1 when the predicted session closes above the previous close; next_session_return is the exact return used to derive it",
+      "news_cutoff_utc = session date at 00:00 UTC; Phase 4 may only use articles whose available_from is at or before it (day-precision news published the day before at the latest)",
+      "no news data is read in Phase 3; this table is the market-only baseline's input",
+      "aggregation window is (cutoff - 7 day(s), cutoff]; only articles whose available_from is at or before the cutoff are used (invariant 2)",
+      "118 of 1209 session(s) have no article in the window and carry zero counts plus no_news=1; no sentiment value was imputed",
+      "article membership is per-session: one article can fall inside several overlapping windows, so window counts are not unique-article totals"
+    ]
+  },
+  "target_balance": {
+    "rows": 1209,
+    "positive": 651,
+    "negative": 558,
+    "positive_rate": 0.538462
+  },
+  "splits": {
+    "fractions": {
+      "train": 0.7,
+      "validation": 0.15,
+      "test": 0.15
+    },
+    "ranges": {
+      "train": [
+        0,
+        846
+      ],
+      "validation": [
+        846,
+        1027
+      ],
+      "test": [
+        1027,
+        1209
+      ]
+    },
+    "periods": {
+      "train": {
+        "rows": 846,
+        "start_index": 0,
+        "stop_index": 846,
+        "first_session": "2018-03-15",
+        "last_session": "2021-07-23",
+        "positive": 478,
+        "negative": 368,
+        "positive_rate": 0.565012
+      },
+      "validation": {
+        "rows": 181,
+        "start_index": 846,
+        "stop_index": 1027,
+        "first_session": "2021-07-26",
+        "last_session": "2022-04-11",
+        "positive": 95,
+        "negative": 86,
+        "positive_rate": 0.524862
+      },
+      "test": {
+        "rows": 182,
+        "start_index": 1027,
+        "stop_index": 1209,
+        "first_session": "2022-04-12",
+        "last_session": "2022-12-30",
+        "positive": 78,
+        "negative": 104,
+        "positive_rate": 0.428571,
+        "share_of_rows": 0.150538
+      }
+    }
+  },
+  "models": {
+    "naive_majority": {
+      "predicted_class": 1,
+      "definition": "always predict the majority class of the training period",
+      "test": {
+        "rows": 182,
+        "accuracy": 0.428571,
+        "balanced_accuracy": 0.5,
+        "precision_positive": 0.428571,
+        "recall_positive": 1.0,
+        "f1_positive": 0.6,
+        "confusion_matrix": {
+          "labels": [
+            0,
+            1
+          ],
+          "rows_true_negative_col_predicted": [
+            0,
+            104
+          ],
+          "rows_true_positive_col_predicted": [
+            0,
+            78
+          ]
+        },
+        "predicted_positive": 182,
+        "actual_positive": 78,
+        "roc_auc": null
+      }
+    },
+    "market_only": {
+      "feature_columns": [
+        "return_1d",
+        "return_5d",
+        "return_20d",
+        "sma_ratio_10",
+        "sma_ratio_50",
+        "rsi_14",
+        "volatility_20",
+        "volume_ratio_20",
+        "intraday_range",
+        "overnight_gap"
+      ],
+      "selection_metric": "balanced_accuracy",
+      "selection_on_validation": [
+        {
+          "c": 0.01,
+          "validation": {
+            "rows": 181,
+            "accuracy": 0.519337,
+            "balanced_accuracy": 0.495288,
+            "precision_positive": 0.522472,
+            "recall_positive": 0.978947,
+            "f1_positive": 0.681319,
+            "confusion_matrix": {
+              "labels": [
+                0,
+                1
+              ],
+              "rows_true_negative_col_predicted": [
+                1,
+                85
+              ],
+              "rows_true_positive_col_predicted": [
+                2,
+                93
+              ]
+            },
+            "predicted_positive": 178,
+            "actual_positive": 95,
+            "roc_auc": 0.473317
+          }
+        },
+        {
+          "c": 0.1,
+          "validation": {
+            "rows": 181,
+            "accuracy": 0.502762,
+            "balanced_accuracy": 0.481151,
+            "precision_positive": 0.514793,
+            "recall_positive": 0.915789,
+            "f1_positive": 0.659091,
+            "confusion_matrix": {
+              "labels": [
+                0,
+                1
+              ],
+              "rows_true_negative_col_predicted": [
+                4,
+                82
+              ],
+              "rows_true_positive_col_predicted": [
+                8,
+                87
+              ]
+            },
+            "predicted_positive": 169,
+            "actual_positive": 95,
+            "roc_auc": 0.487026
+          }
+        },
+        {
+          "c": 1.0,
+          "validation": {
+            "rows": 181,
+            "accuracy": 0.497238,
+            "balanced_accuracy": 0.475887,
+            "precision_positive": 0.511905,
+            "recall_positive": 0.905263,
+            "f1_positive": 0.653992,
+            "confusion_matrix": {
+              "labels": [
+                0,
+                1
+              ],
+              "rows_true_negative_col_predicted": [
+                4,
+                82
+              ],
+              "rows_true_positive_col_predicted": [
+                9,
+                86
+              ]
+            },
+            "predicted_positive": 168,
+            "actual_positive": 95,
+            "roc_auc": 0.494614
+          }
+        },
+        {
+          "c": 10.0,
+          "validation": {
+            "rows": 181,
+            "accuracy": 0.502762,
+            "balanced_accuracy": 0.481151,
+            "precision_positive": 0.514793,
+            "recall_positive": 0.915789,
+            "f1_positive": 0.659091,
+            "confusion_matrix": {
+              "labels": [
+                0,
+                1
+              ],
+              "rows_true_negative_col_predicted": [
+                4,
+                82
+              ],
+              "rows_true_positive_col_predicted": [
+                8,
+                87
+              ]
+            },
+            "predicted_positive": 169,
+            "actual_positive": 95,
+            "roc_auc": 0.495961
+          }
+        }
+      ],
+      "selected_c": 0.01,
+      "fit_rows": 1027,
+      "validation_of_selected_c": {
+        "rows": 181,
+        "accuracy": 0.519337,
+        "balanced_accuracy": 0.495288,
+        "precision_positive": 0.522472,
+        "recall_positive": 0.978947,
+        "f1_positive": 0.681319,
+        "confusion_matrix": {
+          "labels": [
+            0,
+            1
+          ],
+          "rows_true_negative_col_predicted": [
+            1,
+            85
+          ],
+          "rows_true_positive_col_predicted": [
+            2,
+            93
+          ]
+        },
+        "predicted_positive": 178,
+        "actual_positive": 95,
+        "roc_auc": 0.473317
+      },
+      "test": {
+        "rows": 182,
+        "accuracy": 0.445055,
+        "balanced_accuracy": 0.50641,
+        "precision_positive": 0.431953,
+        "recall_positive": 0.935897,
+        "f1_positive": 0.591093,
+        "confusion_matrix": {
+          "labels": [
+            0,
+            1
+          ],
+          "rows_true_negative_col_predicted": [
+            8,
+            96
+          ],
+          "rows_true_positive_col_predicted": [
+            5,
+            73
+          ]
+        },
+        "predicted_positive": 169,
+        "actual_positive": 78,
+        "roc_auc": 0.531558
+      },
+      "standardised_coefficients": {
+        "volume_ratio_20": -0.094307,
+        "overnight_gap": -0.093083,
+        "return_5d": -0.050633,
+        "return_1d": -0.046231,
+        "sma_ratio_50": 0.036846,
+        "return_20d": -0.020487,
+        "sma_ratio_10": 0.010728,
+        "volatility_20": 0.009987,
+        "intraday_range": -0.003735,
+        "rsi_14": 0.00223
+      }
+    },
+    "market_plus_news": {
+      "feature_columns": [
+        "return_1d",
+        "return_5d",
+        "return_20d",
+        "sma_ratio_10",
+        "sma_ratio_50",
+        "rsi_14",
+        "volatility_20",
+        "volume_ratio_20",
+        "intraday_range",
+        "overnight_gap",
+        "news_count_total",
+        "news_count_armed_conflict",
+        "news_count_sanctions",
+        "news_count_trade_restriction",
+        "news_count_energy_or_supply_disruption",
+        "news_count_diplomatic_development",
+        "news_count_other_or_uncertain",
+        "news_positive_count",
+        "news_negative_count",
+        "news_neutral_count",
+        "news_sentiment_sum",
+        "news_days_since_last",
+        "no_news"
+      ],
+      "selection_metric": "balanced_accuracy",
+      "selection_on_validation": [
+        {
+          "c": 0.01,
+          "validation": {
+            "rows": 181,
+            "accuracy": 0.524862,
+            "balanced_accuracy": 0.501652,
+            "precision_positive": 0.525714,
+            "recall_positive": 0.968421,
+            "f1_positive": 0.681481,
+            "confusion_matrix": {
+              "labels": [
+                0,
+                1
+              ],
+              "rows_true_negative_col_predicted": [
+                3,
+                83
+              ],
+              "rows_true_positive_col_predicted": [
+                3,
+                92
+              ]
+            },
+            "predicted_positive": 175,
+            "actual_positive": 95,
+            "roc_auc": 0.492534
+          }
+        },
+        {
+          "c": 0.1,
+          "validation": {
+            "rows": 181,
+            "accuracy": 0.502762,
+            "balanced_accuracy": 0.483354,
+            "precision_positive": 0.515528,
+            "recall_positive": 0.873684,
+            "f1_positive": 0.648438,
+            "confusion_matrix": {
+              "labels": [
+                0,
+                1
+              ],
+              "rows_true_negative_col_predicted": [
+                8,
+                78
+              ],
+              "rows_true_positive_col_predicted": [
+                12,
+                83
+              ]
+            },
+            "predicted_positive": 161,
+            "actual_positive": 95,
+            "roc_auc": 0.49951
+          }
+        },
+        {
+          "c": 1.0,
+          "validation": {
+            "rows": 181,
+            "accuracy": 0.508287,
+            "balanced_accuracy": 0.489718,
+            "precision_positive": 0.518987,
+            "recall_positive": 0.863158,
+            "f1_positive": 0.648221,
+            "confusion_matrix": {
+              "labels": [
+                0,
+                1
+              ],
+              "rows_true_negative_col_predicted": [
+                10,
+                76
+              ],
+              "rows_true_positive_col_predicted": [
+                13,
+                82
+              ]
+            },
+            "predicted_positive": 158,
+            "actual_positive": 95,
+            "roc_auc": 0.501469
+          }
+        },
+        {
+          "c": 10.0,
+          "validation": {
+            "rows": 181,
+            "accuracy": 0.508287,
+            "balanced_accuracy": 0.489718,
+            "precision_positive": 0.518987,
+            "recall_positive": 0.863158,
+            "f1_positive": 0.648221,
+            "confusion_matrix": {
+              "labels": [
+                0,
+                1
+              ],
+              "rows_true_negative_col_predicted": [
+                10,
+                76
+              ],
+              "rows_true_positive_col_predicted": [
+                13,
+                82
+              ]
+            },
+            "predicted_positive": 158,
+            "actual_positive": 95,
+            "roc_auc": 0.502815
+          }
+        }
+      ],
+      "selected_c": 0.01,
+      "fit_rows": 1027,
+      "validation_of_selected_c": {
+        "rows": 181,
+        "accuracy": 0.524862,
+        "balanced_accuracy": 0.501652,
+        "precision_positive": 0.525714,
+        "recall_positive": 0.968421,
+        "f1_positive": 0.681481,
+        "confusion_matrix": {
+          "labels": [
+            0,
+            1
+          ],
+          "rows_true_negative_col_predicted": [
+            3,
+            83
+          ],
+          "rows_true_positive_col_predicted": [
+            3,
+            92
+          ]
+        },
+        "predicted_positive": 175,
+        "actual_positive": 95,
+        "roc_auc": 0.492534
+      },
+      "test": {
+        "rows": 182,
+        "accuracy": 0.456044,
+        "balanced_accuracy": 0.514423,
+        "precision_positive": 0.436364,
+        "recall_positive": 0.923077,
+        "f1_positive": 0.592593,
+        "confusion_matrix": {
+          "labels": [
+            0,
+            1
+          ],
+          "rows_true_negative_col_predicted": [
+            11,
+            93
+          ],
+          "rows_true_positive_col_predicted": [
+            6,
+            72
+          ]
+        },
+        "predicted_positive": 165,
+        "actual_positive": 78,
+        "roc_auc": 0.524901
+      },
+      "standardised_coefficients": {
+        "news_count_armed_conflict": -0.106152,
+        "news_count_diplomatic_development": -0.102146,
+        "volume_ratio_20": -0.096987,
+        "overnight_gap": -0.094171,
+        "news_days_since_last": -0.064041,
+        "return_5d": -0.05469,
+        "no_news": 0.053811,
+        "return_1d": -0.04927,
+        "news_count_sanctions": 0.046819,
+        "news_count_energy_or_supply_disruption": -0.044166,
+        "news_sentiment_sum": -0.033711,
+        "sma_ratio_50": 0.025551,
+        "news_negative_count": 0.020164,
+        "return_20d": -0.018038,
+        "news_count_other_or_uncertain": 0.017616,
+        "news_positive_count": -0.01704,
+        "rsi_14": -0.016173,
+        "intraday_range": -0.012507,
+        "news_neutral_count": 0.012462,
+        "news_count_total": 0.011625,
+        "sma_ratio_10": 0.011201,
+        "volatility_20": 0.006881,
+        "news_count_trade_restriction": -0.003538
+      }
+    }
+  },
+  "comparison": {
+    "metric": "balanced_accuracy",
+    "naive_majority": 0.5,
+    "market_only": 0.50641,
+    "market_plus_news": 0.514423,
+    "news_minus_market_only": 0.008013,
+    "news_beats_market_only_on_test": true,
+    "note": "A single held-out period of a few hundred sessions is a small sample: a difference of a few points is indistinguishable from noise. This is a fair comparison of two baselines, not evidence of predictive skill or profitability."
+  },
+  "checks": [
+    {
+      "name": "market_rows_loaded",
+      "passed": true,
+      "detail": "1259 cleaned session(s) read from data/processed/market_SPY_1d_clean.csv"
+    },
+    {
+      "name": "news_articles_loaded",
+      "passed": true,
+      "detail": "5930 classified article(s) read from data/processed/news_classified_news-category-dataset_politics.csv"
+    },
+    {
+      "name": "news_features_complete",
+      "passed": true,
+      "detail": "every session row has all 13 news features; no_news is 0 or 1, never missing"
+    },
+    {
+      "name": "features_chronological",
+      "passed": true,
+      "detail": "feature rows are in ascending session order; nothing was shuffled"
+    },
+    {
+      "name": "features_no_missing_values",
+      "passed": true,
+      "detail": "every kept row has a value for every market and news feature; nothing was imputed"
+    },
+    {
+      "name": "split_periods_ordered_and_disjoint",
+      "passed": true,
+      "detail": "train=846 validation=181 test=182 contiguous rows in time order, covering every row exactly once"
+    },
+    {
+      "name": "target_matches_return_sign",
+      "passed": true,
+      "detail": "target is 1 exactly when the predicted session's return is above zero"
+    },
+    {
+      "name": "features_exclude_target",
+      "passed": true,
+      "detail": "no context or target column is used as a model input"
+    },
+    {
+      "name": "both_models_fit_without_test_rows",
+      "passed": true,
+      "detail": "both models were fit on 1027 train+validation rows; the 182 test rows were not used for fitting or selection"
+    },
+    {
+      "name": "same_test_rows_for_both_models",
+      "passed": true,
+      "detail": "market-only and market+news are scored on the same held-out sessions, in the same order"
+    }
+  ],
+  "limitations": [
+    "One instrument (SPY) and one historical window: results do not generalise to other markets or periods.",
+    "The news source ends before the market series: sessions after its last available article carry no_news=1.",
+    "News labels come from the Phase 2 keyword baseline, whose agreement with the 200 human-labelled review rows is weak on rare categories (see phase2_classifier_evaluation.json): classification error attenuates any signal.",
+    "96.3% of the corpus falls to other_or_uncertain and headline scope misses body-only events, so the news signal is sparse.",
+    "Sentiment is text tone, not severity or expected market impact.",
+    "A single held-out period of a few hundred sessions cannot distinguish a small effect from noise.",
+    "This is a research baseline, not financial advice, and it makes no claim of reliable prediction."
+  ],
+  "next_step": "Phase 5 \u2014 implement the deterministic trading simulator (initial capital, position limits, execution timing, transaction costs) and its buy-and-hold and rule-based benchmarks."
+}

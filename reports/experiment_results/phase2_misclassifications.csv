@@ -1,0 +1,20 @@
+article_id,published_at,headline,true_event_category,predicted_event_category,matched_keywords,competing_categories,evidence_negated,conditional,sentiment_label
+0c296f275c13bf0a,2018-04-11 00:00:00+00:00,Trump Warns Russia: Syria Strikes 'Coming',armed_conflict,other_or_uncertain,,,False,False,negative
+77b7ab785a1093df,2018-01-01 00:00:00+00:00,"Donald Trump Rages Against Iran, Pakistan In First Tweets Of 2018",diplomatic_development,other_or_uncertain,,,False,False,neutral
+b0a98599671f15c9,2018-01-02 00:00:00+00:00,It Is Vital To Push Back Hard Against Right-Wing Lies That Mueller Probe Of Trump Is A 'Coup',diplomatic_development,other_or_uncertain,,,False,False,neutral
+0b0553ddfe77b738,2018-01-05 00:00:00+00:00,National Security Agency Director Mike Rogers To Retire,diplomatic_development,other_or_uncertain,,,False,False,neutral
+216f615d6665dcaa,2018-01-10 00:00:00+00:00,Shelly Simonds Concedes To David Yancey In Virginia Tiebreaker Race,diplomatic_development,other_or_uncertain,,,False,False,neutral
+da54a213aa624e45,2018-03-02 00:00:00+00:00,"Vietnamese Refugees Are Suing ICE For Unlawful, Prolonged Detention",diplomatic_development,other_or_uncertain,,,False,False,neutral
+1a7867f7935b5d00,2018-03-23 00:00:00+00:00,Trump Administration To Approve $1 Billion Arms Sale To Saudi Arabia,diplomatic_development,other_or_uncertain,,,False,False,positive
+55c2eed454fb9f51,2018-05-21 00:00:00+00:00,Hillary Clinton Tips A Russian Hat At Trump During Yale Commencement Speech,diplomatic_development,other_or_uncertain,,,False,False,neutral
+84aa1eb3a1246a0c,2018-07-09 00:00:00+00:00,Twitter Users Eviscerate Trump's Claim Kim Jong Un Will Honor 'Our Handshake',diplomatic_development,other_or_uncertain,,,False,False,neutral
+3729079497589637,2019-10-09 00:00:00+00:00,"Russian Propaganda Increased After 2016 Election, Report Finds",diplomatic_development,other_or_uncertain,,,False,False,neutral
+92d7228fb9595807,2019-11-09 00:00:00+00:00,Donald Trump 'Would Love To' Take Up Putin's Invite To Russian Military Parade,diplomatic_development,other_or_uncertain,,,False,False,neutral
+9fe7c4c78b0a7f7a,2020-06-25 00:00:00+00:00,George Floyd Died A Month Ago. There Have Been Protests Every Day Since.,diplomatic_development,other_or_uncertain,,,False,False,negative
+1aa62c630d6bab6e,2020-08-30 00:00:00+00:00,How A Massachusetts Primary Could Affect The Puerto Rican Debt Crisis,diplomatic_development,other_or_uncertain,,,False,False,negative
+40ae59bd2643d407,2021-01-18 00:00:00+00:00,"Woman Who Stole Pelosi's Laptop May Have Tried To Sell It To Russians, FBI Says",diplomatic_development,other_or_uncertain,,,False,False,neutral
+d24cb9a9309e6e84,2021-03-31 00:00:00+00:00,Joe Scarborough Slams Fox News By Airing ‘Deeply Offensive’ Clip,other_or_uncertain,armed_conflict,offensive,,False,False,neutral
+91d73d938aec2262,2022-02-13 00:00:00+00:00,Rudy Giuliani Reportedly In Talks To Testify Before Jan. 6 Committee,other_or_uncertain,diplomatic_development,talks,,False,False,neutral
+fd85e856600362b4,2018-07-10 00:00:00+00:00,Senate To Vote On Motion Addressing Trump's Ability To Levy Tariffs,other_or_uncertain,trade_restriction,tariffs,,False,False,neutral
+1a8056c29c57c0f0,2018-02-12 00:00:00+00:00,See Barack And Michelle Obama's Official Portraits,sanctions,other_or_uncertain,,,False,False,neutral
+9935aeded6079fe0,2018-04-13 00:00:00+00:00,"Trump Floated Rejoining Trans-Pacific Partnership, Walked It Back Hours Later: Report",trade_restriction,other_or_uncertain,,,False,False,neutral

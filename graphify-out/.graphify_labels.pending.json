@@ -1,0 +1,21 @@
+{
+  "5": "labeller.py",
+  "12": "sentiment.py",
+  "14": "inspect_data.py",
+  "15": "news_features.py",
+  "16": "train_news_aware.py",
+  "17": "test_news_data.py",
+  "18": "classify_news.py",
+  "19": "processed:features_news:SPY:1d",
+  "20": "trading",
+  "27": "fixture",
+  "28": "paths.py",
+  "29": "pandas",
+  "33": "news_data.py",
+  "35": "_select_and_fit",
+  "38": "utc_now_iso",
+  "40": "test_classify_news.py",
+  "43": "Any",
+  "51": "DataFrame",
+  "52": "Path"
+}

@@ -61,6 +61,7 @@ BASE_CONFIG: dict[str, Any] = {
         "rsi_window": 2,
         "volatility_window": 2,
         "volume_window": 2,
+        "news_lookback_days": 7,
     },
     "splits": {"train_fraction": 0.6, "validation_fraction": 0.2},
     "model": {

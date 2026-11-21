@@ -168,13 +168,14 @@ class NLPSettings:
 
 @dataclass(frozen=True)
 class FeatureSettings:
-    """Market-only feature windows used from Phase 3 onward."""
+    """Market feature windows (Phase 3) and the news aggregation window (Phase 4)."""
 
     return_windows: tuple[int, ...]
     moving_average_windows: tuple[int, ...]
     rsi_window: int
     volatility_window: int
     volume_window: int
+    news_lookback_days: int
 
 
 @dataclass(frozen=True)
@@ -265,6 +266,7 @@ class Config:
                 "rsi_window": self.features.rsi_window,
                 "volatility_window": self.features.volatility_window,
                 "volume_window": self.features.volume_window,
+                "news_lookback_days": self.features.news_lookback_days,
             },
             "splits": {
                 "train_fraction": self.splits.train_fraction,
@@ -390,6 +392,7 @@ def load_config(path: Path | str | None = None, *, root: Path | str | None = Non
         rsi_window=_require_int(features_raw, "rsi_window", where=features_where),
         volatility_window=_require_int(features_raw, "volatility_window", where=features_where),
         volume_window=_require_int(features_raw, "volume_window", where=features_where),
+        news_lookback_days=_require_int(features_raw, "news_lookback_days", where=features_where),
     )
     for name, window in (
         ("rsi_window", features.rsi_window),
@@ -398,6 +401,10 @@ def load_config(path: Path | str | None = None, *, root: Path | str | None = Non
     ):
         if window < 2:
             raise ConfigError(f"{features_where}.{name} must be >= 2, got {window}")
+    if features.news_lookback_days < 1:
+        raise ConfigError(
+            f"{features_where}.news_lookback_days must be >= 1, got {features.news_lookback_days}"
+        )
 
     splits_where = f"{where}: splits"
     train_fraction = _require_number(splits_raw, "train_fraction", where=splits_where)

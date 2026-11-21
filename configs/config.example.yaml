@@ -61,6 +61,10 @@ features:
   rsi_window: 14
   volatility_window: 20
   volume_window: 20
+  # Phase 4: per-session news features aggregate articles whose available_from
+  # falls in (news_cutoff - lookback_days, news_cutoff]. Sessions with no article
+  # in that window get zero counts plus no_news=1; nothing is imputed.
+  news_lookback_days: 7
 
 splits:
   # Chronological cut of the feature rows; the test period is the remainder and is

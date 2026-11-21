@@ -12,16 +12,16 @@
     "semantic_hash": "cb14dfd7884815dfadb510f6f0f1b860"
   },
   "configs/config.example.yaml": {
-    "mtime": 1795248397.0583322,
-    "seen": 1795257147.444505,
-    "ast_hash": "2046ebeafae1c72837692629e7874d57",
-    "semantic_hash": "2046ebeafae1c72837692629e7874d57"
+    "mtime": 1795260366.3908122,
+    "seen": 1795260936.1468267,
+    "ast_hash": "6fb59da90b5eaba46a817a1d7b8210e5",
+    "semantic_hash": ""
   },
   "data/manifest.json": {
-    "mtime": 1795248973.2939584,
-    "seen": 1795257147.444505,
-    "ast_hash": "80c073645cd48f3011f3ed72d170a209",
-    "semantic_hash": "80c073645cd48f3011f3ed72d170a209"
+    "mtime": 1795263316.8668485,
+    "seen": 1795263469.5899556,
+    "ast_hash": "491aed9e835a86216fdcd2efb4f2fa0a",
+    "semantic_hash": ""
   },
   "pyproject.toml": {
     "mtime": 1791914648.6392882,
@@ -48,10 +48,10 @@
     "semantic_hash": "8675db4266ce6f188dff79917813feca"
   },
   "reports/experiment_results/phase2_classifier_evaluation.json": {
-    "mtime": 1795246592.6290643,
-    "seen": 1795257147.444505,
-    "ast_hash": "4d8ab7b15733d9aaa482ae53a01766cf",
-    "semantic_hash": "4d8ab7b15733d9aaa482ae53a01766cf"
+    "mtime": 1795263199.610725,
+    "seen": 1795263469.5899556,
+    "ast_hash": "976fd80951d36b8689a749ac5c6d5689",
+    "semantic_hash": ""
   },
   "reports/experiment_results/phase3_baseline_report.json": {
     "mtime": 1795248973.2959738,
@@ -72,10 +72,10 @@
     "semantic_hash": "9f34774fbe9ad376d668fd006ff2d72f"
   },
   "src/stock_project/common/config.py": {
-    "mtime": 1795248279.6919653,
-    "seen": 1795257147.444505,
-    "ast_hash": "fa4ab84ad6ab581dde425c4caaed8c02",
-    "semantic_hash": "fa4ab84ad6ab581dde425c4caaed8c02"
+    "mtime": 1795260363.601269,
+    "seen": 1795260936.1468267,
+    "ast_hash": "5bff554cbfed157b254fbc25640a91b3",
+    "semantic_hash": ""
   },
   "src/stock_project/common/errors.py": {
     "mtime": 1791914648.8239553,
@@ -168,10 +168,10 @@
     "semantic_hash": "9f2583c98485f5683576e1c807689535"
   },
   "src/stock_project/models/train_baseline.py": {
-    "mtime": 1795248106.8252916,
-    "seen": 1795257147.444505,
-    "ast_hash": "090591fcd5353656218454f38a76d8ca",
-    "semantic_hash": "090591fcd5353656218454f38a76d8ca"
+    "mtime": 1795260435.936034,
+    "seen": 1795260936.1468267,
+    "ast_hash": "632844d26d197830a832e32ba499be29",
+    "semantic_hash": ""
   },
   "src/stock_project/nlp/__init__.py": {
     "mtime": 1791915046.9269032,
@@ -240,10 +240,10 @@
     "semantic_hash": "10959a342e1bf830def390e6320adc21"
   },
   "tests/conftest.py": {
-    "mtime": 1795248398.1320746,
-    "seen": 1795257147.444505,
-    "ast_hash": "782df3cc0a9d8f04eb4850d7cf903d8b",
-    "semantic_hash": "782df3cc0a9d8f04eb4850d7cf903d8b"
+    "mtime": 1795260368.04922,
+    "seen": 1795260936.1468267,
+    "ast_hash": "627855273bccc2c93b46febe6669b6dd",
+    "semantic_hash": ""
   },
   "tests/test_annotate.py": {
     "mtime": 1791915497.8455346,
@@ -342,10 +342,10 @@
     "semantic_hash": "98418e41396ef705fe6e47ecbfc85d12"
   },
   "AGENTS.md": {
-    "mtime": 1795249392.496204,
-    "seen": 1795257147.444505,
-    "ast_hash": "c23f72ef259831c4bbcdc3ccce0fd786",
-    "semantic_hash": "c23f72ef259831c4bbcdc3ccce0fd786"
+    "mtime": 1795263431.5804262,
+    "seen": 1795263469.5899556,
+    "ast_hash": "594d929d35093daf1dbf03954e0fe7fb",
+    "semantic_hash": ""
   },
   "CLAUDE.md": {
     "mtime": 1795256103.3860812,
@@ -360,22 +360,22 @@
     "semantic_hash": "df2a45850e50559c421eaa1e7825b275"
   },
   "README.md": {
-    "mtime": 1795249391.9137661,
-    "seen": 1795257147.444505,
-    "ast_hash": "7f1f23e3de9f5ee1bce220e8b3f5c6f5",
-    "semantic_hash": "7f1f23e3de9f5ee1bce220e8b3f5c6f5"
+    "mtime": 1795263421.7151966,
+    "seen": 1795263469.5899556,
+    "ast_hash": "b8a2833886457ce2babdfa1373657b87",
+    "semantic_hash": ""
   },
   "docs/ARCHITECTURE.md": {
-    "mtime": 1795249066.9687386,
-    "seen": 1795257147.444505,
-    "ast_hash": "ce1ce0e23723b77ea87190ffd2bea934",
-    "semantic_hash": "ce1ce0e23723b77ea87190ffd2bea934"
+    "mtime": 1795263435.5587738,
+    "seen": 1795263469.5899556,
+    "ast_hash": "2efa2899ca68ab7b1ff6275b536ddb6b",
+    "semantic_hash": ""
   },
   "docs/ROADMAP.md": {
-    "mtime": 1795249390.8187916,
-    "seen": 1795257147.444505,
-    "ast_hash": "db803cc9f51d14b06709d22786b1aee0",
-    "semantic_hash": "db803cc9f51d14b06709d22786b1aee0"
+    "mtime": 1795263399.3864253,
+    "seen": 1795263469.5899556,
+    "ast_hash": "21bc30dc73a1a1ea056f7fd27cd30879",
+    "semantic_hash": ""
   },
   "docs/annotation_guidelines.md": {
     "mtime": 1791954154.50277,
@@ -384,15 +384,45 @@
     "semantic_hash": "4d98a961a2a82b22a5b71fe2d25245ef"
   },
   "docs/dataset_notes.md": {
-    "mtime": 1791954170.4075665,
-    "seen": 1795257147.444505,
-    "ast_hash": "e048fe11652776096597a0f6121e0316",
-    "semantic_hash": "e048fe11652776096597a0f6121e0316"
+    "mtime": 1795263444.9411266,
+    "seen": 1795263469.5899556,
+    "ast_hash": "eb9ca0eec82b3aede71a721a36bb9ffb",
+    "semantic_hash": ""
   },
   "requirements.txt": {
     "mtime": 1791914648.65232,
     "seen": 1795257147.444505,
     "ast_hash": "02d73c04ebd17317b1e71b590aa5d5c4",
     "semantic_hash": "02d73c04ebd17317b1e71b590aa5d5c4"
+  },
+  "reports/experiment_results/phase4_news_comparison_report.json": {
+    "mtime": 1795263316.8691144,
+    "seen": 1795263469.5899556,
+    "ast_hash": "20ae0d4fea6d42edc2183bc16a7f00fe",
+    "semantic_hash": ""
+  },
+  "src/stock_project/features/news_features.py": {
+    "mtime": 1795260427.8460753,
+    "seen": 1795260936.1468267,
+    "ast_hash": "731f5da63c012b9883fd649d7399e019",
+    "semantic_hash": ""
+  },
+  "src/stock_project/models/train_news_aware.py": {
+    "mtime": 1795263309.7998593,
+    "seen": 1795263469.5899556,
+    "ast_hash": "0190bbe50da335eb7bad1b671fc37e74",
+    "semantic_hash": ""
+  },
+  "tests/test_news_features.py": {
+    "mtime": 1795260660.255848,
+    "seen": 1795260936.1468267,
+    "ast_hash": "3ede9b0973f279a88fb14b12348b9550",
+    "semantic_hash": ""
+  },
+  "tests/test_train_news_aware.py": {
+    "mtime": 1795260630.583306,
+    "seen": 1795260936.1468267,
+    "ast_hash": "3d4ab6ea28bd0fb675c36055a60e28af",
+    "semantic_hash": ""
   }
 }

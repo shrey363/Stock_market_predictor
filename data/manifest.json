@@ -1,6 +1,6 @@
 {
   "manifest_version": 1,
-  "updated_at_utc": "2026-11-21T08:16:13Z",
+  "updated_at_utc": "2026-11-21T12:15:16Z",
   "datasets": {
     "classified:news:heegyu/news-category-dataset": {
       "key": "classified:news:heegyu/news-category-dataset",
@@ -145,6 +145,61 @@
         "Derived by features.technical_indicators from the cleaned market table.",
         "50 warm-up row(s) dropped; no imputation.",
         "Features use bars up to and including t-1 for the session t row (invariant 2)."
+      ]
+    },
+    "processed:features_news:SPY:1d": {
+      "key": "processed:features_news:SPY:1d",
+      "name": "market + news features and next-session target (SPY 1d)",
+      "file": "data/processed/features_SPY_1d_news.csv",
+      "sha256": "e818c75007e7f2fa7ac1aac099c62c6493df49f8f309f5f7dd0352612564bc98",
+      "size_bytes": 386421,
+      "retrieved_at_utc": "2026-11-21T12:15:16Z",
+      "source": "data/processed/market_SPY_1d_clean.csv + data/processed/news_classified_news-category-dataset_politics.csv",
+      "url": null,
+      "dataset_id": null,
+      "revision": null,
+      "license": null,
+      "license_url": null,
+      "rows": 1209,
+      "columns": [
+        "symbol",
+        "session_date",
+        "decision_time_utc",
+        "news_cutoff_utc",
+        "return_1d",
+        "return_5d",
+        "return_20d",
+        "sma_ratio_10",
+        "sma_ratio_50",
+        "rsi_14",
+        "volatility_20",
+        "volume_ratio_20",
+        "intraday_range",
+        "overnight_gap",
+        "next_session_return",
+        "target",
+        "news_count_total",
+        "news_count_armed_conflict",
+        "news_count_sanctions",
+        "news_count_trade_restriction",
+        "news_count_energy_or_supply_disruption",
+        "news_count_diplomatic_development",
+        "news_count_other_or_uncertain",
+        "news_positive_count",
+        "news_negative_count",
+        "news_neutral_count",
+        "news_sentiment_sum",
+        "news_days_since_last",
+        "no_news"
+      ],
+      "date_coverage": [
+        "2018-03-15",
+        "2022-12-30"
+      ],
+      "notes": [
+        "Derived by features.technical_indicators plus features.news_features.",
+        "News window: (news_cutoff - 7 day(s), news_cutoff], using available_from only (invariant 2).",
+        "Sessions without news carry zero counts and no_news=1; nothing is imputed."
       ]
     },
     "processed:market:SPY:1d": {
