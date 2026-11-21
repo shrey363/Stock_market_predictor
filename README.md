@@ -1,7 +1,7 @@
 # Geopolitical Event-Aware Stock Market Prediction and Trading
 
 > **AI/ML Mini Project · FinTech · Team of 2**
-> **Status:** Phases 1–4 complete. Phase 2's classifier was evaluated against **200 human labels** (reviewer `sodium16`): accuracy 0.905 vs. naive 0.900, but **balanced accuracy 0.423** (below chance) and kappa 0.270 — it is effectively an `other_or_uncertain` detector, weak on rare categories. Phase 3 baseline: market features, a chronological 846/181/182 split, and a naive vs. market-only comparison scoring test balanced accuracy 0.506 vs. 0.500 — **no meaningful skill**. Phase 4: 13 pre-cutoff news features compared against the same baseline on the same test rows; balanced accuracy 0.514 vs. 0.506 but ROC-AUC 0.525 vs. 0.532 — **no distinguishable skill**, and the news labels come from the weak Phase 2 classifier. 221 tests passing. See [docs/ROADMAP.md](docs/ROADMAP.md) for live progress, [docs/annotation_guidelines.md](docs/annotation_guidelines.md) for the labelling rules, [docs/dataset_notes.md](docs/dataset_notes.md) for the datasets, and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design.
+> **Status:** Phases 1–5 complete. Phase 2's classifier was evaluated against **200 human labels**: accuracy 0.905 vs. naive 0.900, but **balanced accuracy 0.423** and kappa 0.270 — effectively an `other_or_uncertain` detector, weak on rare categories. Phase 3: market features and a chronological 846/181/182 split; market-only test balanced accuracy 0.506 vs. naive 0.500 — **no meaningful skill**. Phase 4: 13 pre-cutoff news features compared on the same test rows; 0.514 vs. 0.506 (ROC-AUC 0.525 vs. 0.532) — **no distinguishable skill**. Phase 5: deterministic trading simulator verified (13/13 checks); buy-and-hold **+42.53%** (1 trade), 5-session momentum **−33.13%** with 323 trades and **31,227.96 of costs** — frequent trading is punished. 239 tests passing. See [docs/ROADMAP.md](docs/ROADMAP.md) for live progress, [docs/annotation_guidelines.md](docs/annotation_guidelines.md) for the labelling rules, [docs/dataset_notes.md](docs/dataset_notes.md) for the datasets, and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design.
 > **Disclaimer:** This is a research and *simulated* trading prototype. It does not provide financial advice, does not execute real trades, and makes no claim of reliable price prediction.
 
 ## Overview
@@ -67,16 +67,17 @@ geopolitical-stock-predictor/
 │   ├── features/               # technical_indicators.py, chronological_splits.py,
 │   │                           # news_features.py (Phase 4 pre-cutoff aggregation)
 │   ├── models/                 # train_baseline.py (Phase 3), train_news_aware.py (Phase 4)
-│   └── trading/                # (planned, Phase 5-6) simulator.py, gym_env.py, train_rl.py
+│   └── trading/                # simulator.py (Phase 5); gym_env.py, train_rl.py (planned, Phase 6)
 ├── tests/
 │   ├── conftest.py             # Offline fixtures (synthetic, hand-checkable)
 │   ├── fixtures/               # Tiny CSV/JSONL fixtures used by the tests
-│   └── test_*.py               # 18 modules: config, ingestion, cleaning, inspection, nlp,
-│                               # features, baselines, news comparison
+│   └── test_*.py               # 19 modules: config, ingestion, cleaning, inspection, nlp,
+│                               # features, baselines, news comparison, simulator
 ├── reports/
 │   ├── experiment_results/     # phase1_data_report.json, phase2_*.json,
 │   │                           # phase3_baseline_report.json, phase3_test_predictions.csv,
-│   │                           # phase4_news_comparison_report.json, phase4_test_predictions.csv
+│   │                           # phase4_news_comparison_report.json, phase4_test_predictions.csv,
+│   │                           # phase5_simulation_report.json, phase5_portfolio_values.csv
 │   └── figures/
 └── docs/
     ├── ARCHITECTURE.md         # System design: data flow, layers, invariants, contracts
@@ -99,7 +100,7 @@ Full detail, checklists, and the running change log live in **[docs/ROADMAP.md](
 | 2 | News classification and sentiment | News dataset with traceable category/sentiment outputs | **Done** — evaluated on 200 human labels; balanced accuracy 0.423 / kappa 0.270 (weak on rare categories) |
 | 3 | Market features and baseline prediction | Reproducible baseline metrics | **Done** — [phase3_baseline_report.json](reports/experiment_results/phase3_baseline_report.json); no skill over the naive baseline |
 | 4 | Add geopolitical features | Fair market-only vs market+news comparison | **Done** — [phase4_news_comparison_report.json](reports/experiment_results/phase4_news_comparison_report.json); news lifts balanced accuracy by 0.008, no distinguishable skill |
-| 5 | Trading simulator | Tested historical simulator | Planned |
+| 5 | Trading simulator | Tested historical simulator | **Done** — deterministic long-only engine; buy-and-hold +42.53%, momentum-5 −33.13% after 323 trades and 31,227.96 costs |
 | 6 | Reinforcement learning | RL evaluation report with metrics and limitations | Planned |
 | 7 | Dashboard and final integration | Working demo and final report | Planned |
 
@@ -199,16 +200,34 @@ News features aggregate only articles whose `available_from` falls in
 `no_news = 1`, and sentiment is summed (never imputed as neutral). Both models use the same split,
 the same C grid, and the same test rows as Phase 3.
 
+### Running Phase 5 (done)
+
+```bash
+# Simulate buy-and-hold and the 5-session momentum benchmark over the cleaned
+# market history with the deterministic simulator (offline; reads the Phase 1 table)
+python -m stock_project.trading.simulator --config configs/config.example.yaml
+```
+
+Writes [`reports/experiment_results/phase5_simulation_report.json`](reports/experiment_results/phase5_simulation_report.json)
+and `phase5_portfolio_values.csv` (one equity row per strategy per session). Rules are fixed and
+recorded in the artifact: actions are decided pre-open, filled at the session's **open**, and
+marked at the **close**; long-only, one position, no pyramiding; a buy spends `position_fraction`
+of equity in whole shares capped by cash; costs are charged on both sides at
+`transaction_cost_bps`; an unaffordable or redundant action does nothing. The engine is pure
+arithmetic, so identical prices and actions always reproduce identical cash and holdings.
+
 ## Testing
 
-**Current state:** 221 tests, all passing (`221 passed` via `pytest`), covering configuration
+**Current state:** 239 tests, all passing (`239 passed` via `pytest`), covering configuration
 validation, market and news ingestion, cleaning/validation, the Phase 1 inspection artifact,
 the Phase 2 machinery (taxonomy integrity, rule classifier, sentiment baseline, review
 sheets, the interactive labeller, metrics), the Phase 3 features and baselines (hand-computed
 indicator values, cutoff/leakage guards, chronological splits, metric definitions, and the
-baseline artifact contract), and the Phase 4 news aggregation and comparison (window boundaries,
-no-silent-fills, post-cutoff leakage, fair test rows, and the comparison artifact). No test touches
-the network.
+baseline artifact contract), the Phase 4 news aggregation and comparison (window boundaries,
+no-silent-fills, post-cutoff leakage, fair test rows, and the comparison artifact), and the
+Phase 5 simulator (hand-computed cash/shares/cost arithmetic, no overspending, chronological
+order, benchmark action leakage, deterministic replay, and the artifact contract). No test
+touches the network.
 
 ```bash
 pytest          # or: pytest -q
@@ -218,7 +237,7 @@ The specification requires, at minimum: date/timezone parsing checks, duplicate 
 
 The suite must run offline and deterministically — no test may download market or news data — and this section is kept in sync with it (how to run, how many tests, what they cover) as each phase lands.
 
-What the current 221 tests cover:
+What the current 239 tests cover:
 
 | Module | Coverage |
 |---|---|
@@ -240,6 +259,7 @@ What the current 221 tests cover:
 | `tests/test_train_baseline.py` | Hand-computed precision/recall/F1/balanced accuracy and AUC, the artifact contract (report, predictions, manifest), determinism, and missing-input error path |
 | `tests/test_news_features.py` | News window `(cutoff - lookback, cutoff]`, day-precision availability, per-category/sentiment counts, explicit no-news rows (no imputed sentiment), recency capping, post-cutoff leakage guard, taxonomy/schema hard errors |
 | `tests/test_train_news_aware.py` | Market-only metrics reproduce Phase 3 exactly on the same split, both models share the same held-out rows, combined feature-store and comparison artifact contracts, determinism, CLI exit status |
+| `tests/test_trading_simulator.py` | Hand-computed buy/sell/hold cash, shares, notional, costs and portfolio values; no overspending or shorting; chronological-order refusal; momentum reads no same-session price; deterministic replay; benchmark and equity artifact contracts |
 
 ## Limitations and responsible use
 

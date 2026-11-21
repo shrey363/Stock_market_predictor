@@ -1,6 +1,6 @@
 # Architecture
 
-Basic system architecture for the **Geopolitical Event-Aware Stock Market Prediction and Trading** project. This describes the *target* design; components are implemented phase by phase per [ROADMAP.md](ROADMAP.md). **Phases 1–4 are implemented** — ingestion, cleaning, inspection, event classification, sentiment scoring, the review/evaluation tooling, market feature engineering, pre-cutoff news aggregation, chronological splitting, and the naive plus market-only baselines, plus the market-plus-news comparison, live in `src/stock_project/` (§10 lists exactly what exists). Phase 2's classifier has been **evaluated against 200 human labels** (weak on rare categories: balanced accuracy 0.423, kappa 0.270), and the `trading/`, `backend/`, and `frontend/` layers are still target design.
+Basic system architecture for the **Geopolitical Event-Aware Stock Market Prediction and Trading** project. This describes the *target* design; components are implemented phase by phase per [ROADMAP.md](ROADMAP.md). **Phases 1–5 are implemented** — ingestion, cleaning, inspection, event classification, sentiment scoring, the review/evaluation tooling, market feature engineering, pre-cutoff news aggregation, chronological splitting, the naive plus market-only baselines, the market-plus-news comparison, and the deterministic trading simulator with its benchmarks live in `src/stock_project/` (§10 lists exactly what exists). Phase 2's classifier has been **evaluated against 200 human labels** (weak on rare categories: balanced accuracy 0.423, kappa 0.270). The Gymnasium wrapper and RL training, plus the `backend/` and `frontend/` layers, are still target design.
 
 - Specification: [PROJECT_DESCRIPTION.md](../PROJECT_DESCRIPTION.md)
 - Overview and setup: [README.md](../README.md)
@@ -142,7 +142,7 @@ Every rule in §3 has (or will have) an explicit, offline test — a comment is 
 | Day-level news timestamps | Every cleaned article has `available_from = published_at + 1 day`, so a same-day cutoff cannot leak post-cutoff news; the aggregation window is tested at both boundaries (`test_window_is_strictly_after_start_and_inclusive_at_cutoff`, `test_day_precision_news_published_the_day_before_is_usable`) | Phase 1 (guard), consumed and tested in Phase 4 |
 | Traceability | Every classified article still carries `article_id`, text, timestamp, and source, plus the matched keywords, competing categories, and vetoed evidence behind its label | Phase 2 (asserted in `test_clean_news_data`, `test_classify_news`) |
 | No invented labels | The classifier writes machine labels only into the processed table; the human review sheet's label column is written empty, unreviewed rows are counted separately from correct ones, and a label outside the taxonomy is a hard error. The labeller only ever writes what a reviewer pressed, keeps skips blank, logs every change to an append-only JSONL file, and serves the reviewer context columns only — never the prediction | Phase 2 (`test_annotate`, `test_evaluate_classifier`, `test_labeller`) |
-| Simulator determinism | Replaying identical prices + costs + actions yields identical cash, positions, and portfolio value (hand-checked numeric fixtures) | Phase 5 |
+| Simulator determinism | Replaying identical prices + costs + actions yields identical cash, positions, and portfolio value (`test_replay_is_deterministic`, plus hand-checked fixtures) | Phase 5 — done |
 | RL information set | Mutating rows after step `t` does not change the observation at `t` | Phase 6 |
 | Artifact contract | Values returned by the API/dashboard equal the values in `reports/experiment_results/` | Phase 7 |
 
@@ -163,7 +163,7 @@ common  →  data  →  preprocessing  →  nlp / features  →  models / tradin
 
 Cross-layer imports that skip or reverse this order are a design bug even when the code runs — restructure or route through `common/` instead.
 
-## 10. Implementation status (Phases 1–4)
+## 10. Implementation status (Phases 1–5)
 
 Implemented and tested:
 
@@ -192,6 +192,7 @@ Implemented and tested:
 | `features/chronological_splits.py` | Ordered train/validation/test ranges (`int()` floor, deterministic) plus per-period rows, dates and class balance; no purge gap is needed because no row depends on another period |
 | `models/train_baseline.py` | CLI: naive majority baseline + `StandardScaler`+`LogisticRegression`, C chosen on validation only, refit on train+validation, one held-out test evaluation; metrics, standardised coefficients, eight pass/fail checks |
 | `models/train_news_aware.py` | CLI: same model family on market-only and market+news features over the identical split, C grid and test rows; comparison report, joint predictions, ten pass/fail checks |
+| `trading/simulator.py` | Deterministic long-only portfolio engine (fills at the open, marks at the close, flat-bps costs, no overspending), buy-and-hold and 5-session momentum action generators, and the Phase 5 benchmark artifact |
 
 Artifact contract:
 
@@ -223,9 +224,15 @@ Artifact contract:
   `data/manifest.json`.
 * `data/processed/features_<SYMBOL>_<interval>_news.csv` — the combined market + news feature
   store, also recorded in `data/manifest.json` with its row/column contract.
+* `reports/experiment_results/phase5_simulation_report.json` — capital, sizing, execution and cost
+  rules as text, the period, per-strategy return/final value/trades/costs/max drawdown, thirteen
+  pass/fail checks, and limitations.
+* `reports/experiment_results/phase5_portfolio_values.csv` — one equity row per strategy per
+  session (`strategy, session_date, action, executed, shares, cash, portfolio_value, ...`), so the
+  dashboard can draw every simulated portfolio without recomputing anything.
 
 Paths inside every artifact are project-relative, so reports are diffable and portable. The
 backend/dashboard and later phases read these files — nothing re-derives numbers by hand.
 
-Not yet implemented (still target design): `trading/`, `backend/`, `frontend/`, and the RL
-experiment artifacts.
+Not yet implemented (still target design): `trading/gym_env.py` and `trading/train_rl.py`,
+`backend/`, `frontend/`, and the RL experiment artifacts.

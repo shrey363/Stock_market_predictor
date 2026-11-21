@@ -1,0 +1,207 @@
+{
+  "generated_at_utc": "2026-11-21T12:39:18Z",
+  "phase": 5,
+  "phase_name": "Trading simulator",
+  "config": {
+    "config_path": "configs/config.example.yaml",
+    "project": {
+      "name": "geopolitical-stock-predictor",
+      "random_seed": 42
+    },
+    "data": {
+      "market": {
+        "symbol": "SPY",
+        "start": "2018-01-01",
+        "end": "2022-12-31",
+        "interval": "1d",
+        "timezone": "UTC",
+        "source": "Yahoo Finance via yfinance (research/educational use; see docs/dataset_notes.md)"
+      },
+      "news": {
+        "dataset_id": "heegyu/news-category-dataset",
+        "revision": "304a05a55bc6abc0446d8fae0d0771716b6a271a",
+        "source_file": "data.json",
+        "license": "CC BY 4.0",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "dataset_url": "https://huggingface.co/datasets/heegyu/news-category-dataset",
+        "source_category_filter": "POLITICS",
+        "start": "2018-01-01",
+        "end": "2022-12-31",
+        "max_articles": 12000,
+        "timestamp_precision": "day"
+      }
+    },
+    "nlp": {
+      "text_scope": "headline",
+      "taxonomy_version": "1.1",
+      "sentiment_mode": "lexicon",
+      "review_sample_size": 200,
+      "review_sample_seed": 42
+    },
+    "features": {
+      "return_windows": [
+        1,
+        5,
+        20
+      ],
+      "moving_average_windows": [
+        10,
+        50
+      ],
+      "rsi_window": 14,
+      "volatility_window": 20,
+      "volume_window": 20,
+      "news_lookback_days": 7
+    },
+    "splits": {
+      "train_fraction": 0.7,
+      "validation_fraction": 0.15
+    },
+    "model": {
+      "type": "logistic_regression",
+      "c_values": [
+        0.01,
+        0.1,
+        1.0,
+        10.0
+      ],
+      "max_iter": 2000,
+      "selection_metric": "balanced_accuracy"
+    },
+    "prediction": {
+      "cutoff_time": "00:00",
+      "target": "next_session_return_positive"
+    },
+    "trading": {
+      "initial_capital": 100000.0,
+      "transaction_cost_bps": 10.0,
+      "position_fraction": 1.0
+    }
+  },
+  "inputs": {
+    "market_table": "data/processed/market_SPY_1d_clean.csv",
+    "sessions": 1259,
+    "first_session": "2018-01-02",
+    "last_session": "2022-12-30"
+  },
+  "execution_rules": {
+    "timing": "each session's action is decided pre-open and filled at that session's open; the portfolio is marked to market at that session's close",
+    "actions": {
+      "hold": "do nothing",
+      "buy": "open a long position only when flat; invest position_fraction of current equity, whole shares only",
+      "sell": "close the entire position"
+    },
+    "position_limit": "long-only, one position, no pyramiding, no shorting",
+    "sizing": "position_fraction=1.0 of equity at the fill price, capped by available cash including the transaction cost; unaffordable sizes are reduced, and zero affordable shares means no trade",
+    "costs": "transaction_cost_bps=10.0 charged on the traded notional of both buys and sells",
+    "idealisation": "no slippage, partial fills, liquidity limits, taxes, or dividends; close is the raw (unadjusted) close"
+  },
+  "strategies": {
+    "buy_and_hold": {
+      "strategy": "buy_and_hold",
+      "sessions": 1259,
+      "first_session": "2018-01-02",
+      "last_session": "2022-12-30",
+      "initial_capital": 100000.0,
+      "final_value": 142527.842159,
+      "total_return": 0.425278,
+      "number_of_trades": 1,
+      "total_transaction_costs": 99.636479,
+      "max_drawdown": 0.340334,
+      "final_cash": 263.884884,
+      "final_shares": 372,
+      "peak_value": 177972.001705
+    },
+    "momentum_5": {
+      "strategy": "momentum_5",
+      "sessions": 1259,
+      "first_session": "2018-01-02",
+      "last_session": "2022-12-30",
+      "initial_capital": 100000.0,
+      "final_value": 66865.119615,
+      "total_return": -0.331349,
+      "number_of_trades": 323,
+      "total_transaction_costs": 31227.958602,
+      "max_drawdown": 0.406303,
+      "final_cash": 322.300889,
+      "final_shares": 174,
+      "peak_value": 112211.980171
+    }
+  },
+  "checks": [
+    {
+      "name": "sessions_loaded",
+      "passed": true,
+      "detail": "1259 session(s) read from data/processed/market_SPY_1d_clean.csv"
+    },
+    {
+      "name": "sessions_chronological_and_unique",
+      "passed": true,
+      "detail": "sessions arrive in ascending order with unique dates; the simulator never reorders rows"
+    },
+    {
+      "name": "prices_complete_and_positive",
+      "passed": true,
+      "detail": "every session has a positive open and close; nothing is filled"
+    },
+    {
+      "name": "buy_and_hold_enters_once",
+      "passed": true,
+      "detail": "the buy-and-hold benchmark executes exactly one trade"
+    },
+    {
+      "name": "benchmarks_cover_every_session",
+      "passed": true,
+      "detail": "each strategy produces one equity row per session"
+    },
+    {
+      "name": "replay_is_deterministic",
+      "passed": true,
+      "detail": "re-running identical prices and actions yields identical cash, shares and portfolio values"
+    },
+    {
+      "name": "maximum_drawdown_in_unit_interval",
+      "passed": true,
+      "detail": "drawdown is measured against the running peak, including the initial capital"
+    },
+    {
+      "name": "buy_and_hold_cash_never_negative",
+      "passed": true,
+      "detail": "minimum cash 263.8848836669931; buys are capped by available cash plus cost"
+    },
+    {
+      "name": "buy_and_hold_shares_never_negative",
+      "passed": true,
+      "detail": "long-only; no short position is ever created"
+    },
+    {
+      "name": "buy_and_hold_costs_match_notional",
+      "passed": true,
+      "detail": "every executed trade is charged exactly notional x 0.001 (10.0 bps)"
+    },
+    {
+      "name": "momentum_5_cash_never_negative",
+      "passed": true,
+      "detail": "minimum cash 1.8475886229862226; buys are capped by available cash plus cost"
+    },
+    {
+      "name": "momentum_5_shares_never_negative",
+      "passed": true,
+      "detail": "long-only; no short position is ever created"
+    },
+    {
+      "name": "momentum_5_costs_match_notional",
+      "passed": true,
+      "detail": "every executed trade is charged exactly notional x 0.001 (10.0 bps)"
+    }
+  ],
+  "limitations": [
+    "Historical simulation only: this is not a forecast and does not establish future profitability.",
+    "One instrument, whole shares, one position, long-only: no portfolio construction or risk limits beyond position_fraction.",
+    "Fills occur at the open with no slippage or liquidity model; real execution would be worse.",
+    "The transaction cost is a flat bps of notional on both sides; market impact and spread are not modelled separately.",
+    "Raw close is used, so dividends and any unadjusted corporate actions are ignored.",
+    "Momentum and buy-and-hold are benchmarks for later comparison, not recommended strategies."
+  ],
+  "next_step": "Phase 6 \u2014 wrap this tested simulator in a Gymnasium environment whose observation uses only information available at the simulated time, then train and evaluate a small RL agent against these benchmarks."
+}
