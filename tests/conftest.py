@@ -72,6 +72,7 @@ BASE_CONFIG: dict[str, Any] = {
     },
     "prediction": {"cutoff_time": "00:00", "target": "next_session_return_positive"},
     "trading": {"initial_capital": 100000.0, "transaction_cost_bps": 10.0, "position_fraction": 1.0},
+    "rl": {"total_timesteps": 256, "seeds": [0, 1]},
 }
 
 

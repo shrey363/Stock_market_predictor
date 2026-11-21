@@ -16,5 +16,9 @@ yfinance==1.7.0
 # Baseline ML (used from Phase 3 onward)
 scikit-learn==1.9.1
 
+# Reinforcement learning (used from Phase 6 onward)
+gymnasium==1.2.1
+stable-baselines3==2.7.1
+
 # Testing
 pytest==9.1.1

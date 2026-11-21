@@ -91,3 +91,9 @@ trading:
   initial_capital: 100000.0
   transaction_cost_bps: 10.0
   position_fraction: 1.0
+
+rl:
+  # Used from Phase 6 onward. Agents are trained only on the train/validation
+  # periods and evaluated once on the held-out test period, per seed.
+  total_timesteps: 50000
+  seeds: [0, 1, 2]

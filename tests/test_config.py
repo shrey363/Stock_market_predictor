@@ -32,6 +32,8 @@ def test_committed_example_config_is_valid():
     assert config.prediction.cutoff_time == "00:00"
     assert config.trading.initial_capital == 100000.0
     assert config.trading.transaction_cost_bps == 10.0
+    assert config.rl.total_timesteps == 50000
+    assert config.rl.seeds == (0, 1, 2)
 
 
 def test_config_snapshot_is_json_serialisable():
@@ -39,6 +41,7 @@ def test_config_snapshot_is_json_serialisable():
     assert snapshot["data"]["market"]["symbol"] == "SPY"
     assert snapshot["data"]["news"]["revision"]
     assert snapshot["project"]["random_seed"] == 42
+    assert snapshot["rl"] == {"total_timesteps": 50000, "seeds": [0, 1, 2]}
 
 
 def test_valid_test_config_loads(config_path: Path):
@@ -92,6 +95,8 @@ def test_invalid_cutoff_time_is_rejected(config_writer, tmp_path: Path):
         {"trading": {"transaction_cost_bps": -1.0}},
         {"trading": {"position_fraction": 0}},
         {"trading": {"position_fraction": 1.5}},
+        {"rl": {"total_timesteps": 0}},
+        {"rl": {"seeds": [-1]}},
         {"data": {"news": {"max_articles": 0}}},
     ],
 )

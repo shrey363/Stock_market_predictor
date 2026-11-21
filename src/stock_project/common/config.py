@@ -18,7 +18,7 @@ from .errors import ConfigError
 from .paths import configs_dir, relative_to_root
 
 SUPPORTED_TIMEZONE = "UTC"
-REQUIRED_SECTIONS = ("project", "data", "nlp", "features", "splits", "model", "prediction", "trading")
+REQUIRED_SECTIONS = ("project", "data", "nlp", "features", "splits", "model", "prediction", "trading", "rl")
 
 #: Supported NLP text scopes (Phase 2 classifies headlines by default).
 TEXT_SCOPES = ("headline", "headline+description")
@@ -210,6 +210,14 @@ class TradingSettings:
 
 
 @dataclass(frozen=True)
+class RLSettings:
+    """Phase 6 RL training budget and the seeds used for the held-out evaluation."""
+
+    total_timesteps: int
+    seeds: tuple[int, ...]
+
+
+@dataclass(frozen=True)
 class Config:
     """A validated configuration plus the path it was loaded from."""
 
@@ -222,6 +230,7 @@ class Config:
     model: ModelSettings
     prediction: PredictionSettings
     trading: TradingSettings
+    rl: RLSettings
     path: Path
     raw: Mapping[str, Any] = field(default_factory=dict, repr=False)
 
@@ -284,6 +293,10 @@ class Config:
                 "transaction_cost_bps": self.trading.transaction_cost_bps,
                 "position_fraction": self.trading.position_fraction,
             },
+            "rl": {
+                "total_timesteps": self.rl.total_timesteps,
+                "seeds": list(self.rl.seeds),
+            },
         }
 
 
@@ -319,6 +332,7 @@ def load_config(path: Path | str | None = None, *, root: Path | str | None = Non
     project_raw = _require_mapping(loaded, "project", where=where)
     prediction_raw = _require_mapping(loaded, "prediction", where=where)
     trading_raw = _require_mapping(loaded, "trading", where=where)
+    rl_raw = _require_mapping(loaded, "rl", where=where)
 
     market_where = f"{where}: data.market"
     market_start = parse_iso_date(_require(market_raw, "start", where=market_where), where=f"{market_where}.start")
@@ -463,6 +477,15 @@ def load_config(path: Path | str | None = None, *, root: Path | str | None = Non
         position_fraction=position_fraction,
     )
 
+    rl_where = f"{where}: rl"
+    total_timesteps = _require_int(rl_raw, "total_timesteps", where=rl_where)
+    if total_timesteps <= 0:
+        raise ConfigError(f"{rl_where}.total_timesteps must be positive, got {total_timesteps}")
+    rl = RLSettings(
+        total_timesteps=total_timesteps,
+        seeds=_require_int_list(rl_raw, "seeds", where=rl_where, minimum=0),
+    )
+
     return Config(
         project=ProjectSettings(
             name=_require_str(project_raw, "name", where=project_where),
@@ -476,6 +499,7 @@ def load_config(path: Path | str | None = None, *, root: Path | str | None = Non
         model=model,
         prediction=prediction,
         trading=trading,
+        rl=rl,
         path=resolved,
         raw=loaded,
     )
@@ -494,6 +518,7 @@ __all__ = [
     "NewsSettings",
     "PredictionSettings",
     "ProjectSettings",
+    "RLSettings",
     "SENTIMENT_MODES",
     "SUPPORTED_TIMEZONE",
     "TEXT_SCOPES",

@@ -1,0 +1,465 @@
+{
+  "generated_at_utc": "2026-11-21T14:03:54Z",
+  "phase": 6,
+  "phase_name": "Reinforcement learning",
+  "config": {
+    "config_path": "configs/config.example.yaml",
+    "project": {
+      "name": "geopolitical-stock-predictor",
+      "random_seed": 42
+    },
+    "data": {
+      "market": {
+        "symbol": "SPY",
+        "start": "2018-01-01",
+        "end": "2022-12-31",
+        "interval": "1d",
+        "timezone": "UTC",
+        "source": "Yahoo Finance via yfinance (research/educational use; see docs/dataset_notes.md)"
+      },
+      "news": {
+        "dataset_id": "heegyu/news-category-dataset",
+        "revision": "304a05a55bc6abc0446d8fae0d0771716b6a271a",
+        "source_file": "data.json",
+        "license": "CC BY 4.0",
+        "license_url": "https://creativecommons.org/licenses/by/4.0/",
+        "dataset_url": "https://huggingface.co/datasets/heegyu/news-category-dataset",
+        "source_category_filter": "POLITICS",
+        "start": "2018-01-01",
+        "end": "2022-12-31",
+        "max_articles": 12000,
+        "timestamp_precision": "day"
+      }
+    },
+    "nlp": {
+      "text_scope": "headline",
+      "taxonomy_version": "1.1",
+      "sentiment_mode": "lexicon",
+      "review_sample_size": 200,
+      "review_sample_seed": 42
+    },
+    "features": {
+      "return_windows": [
+        1,
+        5,
+        20
+      ],
+      "moving_average_windows": [
+        10,
+        50
+      ],
+      "rsi_window": 14,
+      "volatility_window": 20,
+      "volume_window": 20,
+      "news_lookback_days": 7
+    },
+    "splits": {
+      "train_fraction": 0.7,
+      "validation_fraction": 0.15
+    },
+    "model": {
+      "type": "logistic_regression",
+      "c_values": [
+        0.01,
+        0.1,
+        1.0,
+        10.0
+      ],
+      "max_iter": 2000,
+      "selection_metric": "balanced_accuracy"
+    },
+    "prediction": {
+      "cutoff_time": "00:00",
+      "target": "next_session_return_positive"
+    },
+    "trading": {
+      "initial_capital": 100000.0,
+      "transaction_cost_bps": 10.0,
+      "position_fraction": 1.0
+    },
+    "rl": {
+      "total_timesteps": 50000,
+      "seeds": [
+        0,
+        1,
+        2
+      ]
+    }
+  },
+  "algorithm": {
+    "name": "PPO",
+    "library": "stable-baselines3==2.7.1",
+    "policy": "MlpPolicy (64, 64)",
+    "candidate_grid": [
+      {
+        "name": "ppo_steady",
+        "learning_rate": 0.0003,
+        "gamma": 0.99,
+        "ent_coef": 0.01,
+        "n_steps": 256,
+        "batch_size": 64
+      },
+      {
+        "name": "ppo_reactive",
+        "learning_rate": 0.001,
+        "gamma": 0.95,
+        "ent_coef": 0.0,
+        "n_steps": 256,
+        "batch_size": 64
+      }
+    ]
+  },
+  "inputs": {
+    "features_table": "data/processed/features_SPY_1d_news.csv",
+    "market_table": "data/processed/market_SPY_1d_clean.csv",
+    "rows": 1209,
+    "market_columns": [
+      "return_1d",
+      "return_5d",
+      "return_20d",
+      "sma_ratio_10",
+      "sma_ratio_50",
+      "rsi_14",
+      "volatility_20",
+      "volume_ratio_20",
+      "intraday_range",
+      "overnight_gap"
+    ],
+    "news_columns": [
+      "news_count_total",
+      "news_count_armed_conflict",
+      "news_count_sanctions",
+      "news_count_trade_restriction",
+      "news_count_energy_or_supply_disruption",
+      "news_count_diplomatic_development",
+      "news_count_other_or_uncertain",
+      "news_positive_count",
+      "news_negative_count",
+      "news_neutral_count",
+      "news_sentiment_sum",
+      "news_days_since_last",
+      "no_news"
+    ],
+    "first_session": "2018-03-15",
+    "last_session": "2022-12-30",
+    "feature_scaler": "StandardScaler fit on the fitting rows only (train for selection, train+validation for the final agents)"
+  },
+  "environment": {
+    "observation": "the session's pre-cutoff feature row (market features from bars up to t-1 plus news features available before the session's cutoff), followed by [holding flag, cash fraction]",
+    "observation_dimension": 25,
+    "actions": {
+      "hold": 0,
+      "buy": 1,
+      "sell": 2
+    },
+    "reward": "step simple portfolio return value_t / value_(t-1) - 1; costs are inside the reward",
+    "episode": "one chronological pass over the supplied sessions; truncated at the end, never terminated early",
+    "execution": "Phase 5 simulator: fill at the session open, mark to the close, costs on both sides"
+  },
+  "protocol": {
+    "selection_metric": "validation total return (ties: lower transaction costs)",
+    "selection_fit_period": "train only",
+    "final_fit_period": "train + validation",
+    "evaluation_period": "test only, once per seed",
+    "timesteps_per_training": 50000,
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "sharpe_convention": "mean / sample-std of per-session returns x sqrt(252); risk-free rate 0"
+  },
+  "splits": {
+    "fractions": {
+      "train": 0.7,
+      "validation": 0.15,
+      "test": 0.15
+    },
+    "ranges": {
+      "train": [
+        0,
+        846
+      ],
+      "validation": [
+        846,
+        1027
+      ],
+      "test": [
+        1027,
+        1209
+      ]
+    },
+    "periods": {
+      "train": {
+        "rows": 846,
+        "first_session": "2018-03-15",
+        "last_session": "2021-07-23"
+      },
+      "validation": {
+        "rows": 181,
+        "first_session": "2021-07-26",
+        "last_session": "2022-04-11"
+      },
+      "test": {
+        "rows": 182,
+        "first_session": "2022-04-12",
+        "last_session": "2022-12-30"
+      }
+    }
+  },
+  "selection": {
+    "candidates": [
+      {
+        "candidate": {
+          "name": "ppo_steady",
+          "learning_rate": 0.0003,
+          "gamma": 0.99,
+          "ent_coef": 0.01,
+          "n_steps": 256,
+          "batch_size": 64
+        },
+        "validation": {
+          "total_return": -0.001736,
+          "sharpe_ratio": 0.060745,
+          "max_drawdown": 0.122623,
+          "number_of_trades": 19,
+          "total_transaction_costs": 1951.92627
+        }
+      },
+      {
+        "candidate": {
+          "name": "ppo_reactive",
+          "learning_rate": 0.001,
+          "gamma": 0.95,
+          "ent_coef": 0.0,
+          "n_steps": 256,
+          "batch_size": 64
+        },
+        "validation": {
+          "total_return": 0.014059,
+          "sharpe_ratio": 0.200985,
+          "max_drawdown": 0.121161,
+          "number_of_trades": 11,
+          "total_transaction_costs": 1151.503605
+        }
+      }
+    ],
+    "selected": {
+      "name": "ppo_reactive",
+      "learning_rate": 0.001,
+      "gamma": 0.95,
+      "ent_coef": 0.0,
+      "n_steps": 256,
+      "batch_size": 64
+    },
+    "selected_by_validation_total_return": "ppo_reactive"
+  },
+  "test": {
+    "period": {
+      "sessions": 182,
+      "first_session": "2022-04-12",
+      "last_session": "2022-12-30"
+    },
+    "agent": {
+      "per_seed": [
+        {
+          "strategy": "ppo_seed_0",
+          "sessions": 182,
+          "first_session": "2022-04-12",
+          "last_session": "2022-12-30",
+          "initial_capital": 100000.0,
+          "final_value": 100843.770893,
+          "total_return": 0.008438,
+          "number_of_trades": 29,
+          "total_transaction_costs": 2776.131878,
+          "max_drawdown": 0.148468,
+          "final_cash": 264.682819,
+          "final_shares": 263,
+          "peak_value": 101843.175709,
+          "sharpe_ratio": 0.159625,
+          "seed": 0
+        },
+        {
+          "strategy": "ppo_seed_1",
+          "sessions": 182,
+          "first_session": "2022-04-12",
+          "last_session": "2022-12-30",
+          "initial_capital": 100000.0,
+          "final_value": 91864.233141,
+          "total_return": -0.081358,
+          "number_of_trades": 35,
+          "total_transaction_costs": 3354.009748,
+          "max_drawdown": 0.146384,
+          "final_cash": 81.034899,
+          "final_shares": 240,
+          "peak_value": 101683.108356,
+          "sharpe_ratio": -0.554738,
+          "seed": 1
+        },
+        {
+          "strategy": "ppo_seed_2",
+          "sessions": 182,
+          "first_session": "2022-04-12",
+          "last_session": "2022-12-30",
+          "initial_capital": 100000.0,
+          "final_value": 92461.992013,
+          "total_return": -0.07538,
+          "number_of_trades": 13,
+          "total_transaction_costs": 1210.477134,
+          "max_drawdown": 0.196023,
+          "final_cash": 296.363778,
+          "final_shares": 241,
+          "peak_value": 101498.411387,
+          "sharpe_ratio": -0.324634,
+          "seed": 2
+        }
+      ],
+      "aggregate": {
+        "seeds": 3,
+        "mean_total_return": -0.049433,
+        "std_total_return": 0.050207,
+        "min_total_return": -0.081358,
+        "max_total_return": 0.008438,
+        "mean_sharpe_ratio": -0.239916,
+        "mean_number_of_trades": 25.667,
+        "mean_total_transaction_costs": 2446.87292
+      }
+    },
+    "benchmarks": {
+      "buy_and_hold": {
+        "strategy": "buy_and_hold",
+        "sessions": 182,
+        "first_session": "2022-04-12",
+        "last_session": "2022-12-30",
+        "initial_capital": 100000.0,
+        "final_value": 86254.058376,
+        "total_return": -0.137459,
+        "number_of_trades": 1,
+        "total_transaction_costs": 99.692997,
+        "max_drawdown": 0.198403,
+        "final_cash": 207.310024,
+        "final_shares": 225,
+        "peak_value": 100341.311947,
+        "sharpe_ratio": -0.67725
+      },
+      "momentum_5": {
+        "strategy": "momentum_5",
+        "sessions": 182,
+        "first_session": "2022-04-12",
+        "last_session": "2022-12-30",
+        "initial_capital": 100000.0,
+        "final_value": 74974.02352,
+        "total_return": -0.25026,
+        "number_of_trades": 57,
+        "total_transaction_costs": 5064.737619,
+        "max_drawdown": 0.253022,
+        "final_cash": 17.744956,
+        "final_shares": 196,
+        "peak_value": 100000.0,
+        "sharpe_ratio": -2.179054
+      },
+      "cash": {
+        "strategy": "cash",
+        "sessions": 182,
+        "first_session": "2022-04-12",
+        "last_session": "2022-12-30",
+        "initial_capital": 100000.0,
+        "final_value": 100000.0,
+        "total_return": 0.0,
+        "number_of_trades": 0,
+        "total_transaction_costs": 0.0,
+        "max_drawdown": 0.0,
+        "final_cash": 100000.0,
+        "final_shares": 0,
+        "peak_value": 100000.0,
+        "sharpe_ratio": null
+      }
+    }
+  },
+  "checks": [
+    {
+      "name": "features_loaded",
+      "passed": true,
+      "detail": "1209 feature row(s) read from data/processed/features_SPY_1d_news.csv"
+    },
+    {
+      "name": "features_chronological_and_unique",
+      "passed": true,
+      "detail": "feature rows are unique and in ascending session order; nothing was shuffled"
+    },
+    {
+      "name": "features_complete",
+      "passed": true,
+      "detail": "every row has all 23 features; nothing is imputed"
+    },
+    {
+      "name": "features_exclude_target_and_context",
+      "passed": true,
+      "detail": "no target or context column is part of the observation"
+    },
+    {
+      "name": "split_contiguous_and_ordered",
+      "passed": true,
+      "detail": "train=846 validation=181 test=182 contiguous rows in time order, covering every row exactly once"
+    },
+    {
+      "name": "selection_used_no_test_rows",
+      "passed": true,
+      "detail": "candidates were trained on 846 train rows and scored on 181 validation rows; the 182 test rows were not read"
+    },
+    {
+      "name": "final_fit_used_no_test_rows",
+      "passed": true,
+      "detail": "final agents were trained on 1027 train+validation rows and evaluated on 182 held-out sessions"
+    },
+    {
+      "name": "observations_have_expected_dimension",
+      "passed": true,
+      "detail": "observation space is (25,) (23 feature values + 2 portfolio state values), 3 actions"
+    },
+    {
+      "name": "environment_matches_simulator",
+      "passed": true,
+      "detail": "each agent's environment final value equals the Phase 5 simulator replay of its actions"
+    },
+    {
+      "name": "all_strategies_cover_every_test_session",
+      "passed": true,
+      "detail": "each agent seed and benchmark produces one equity row per test session (182)"
+    },
+    {
+      "name": "cash_never_negative",
+      "passed": true,
+      "detail": "buys are capped by available cash including cost, for the agent and every benchmark"
+    },
+    {
+      "name": "shares_never_negative",
+      "passed": true,
+      "detail": "long-only: no strategy ever creates a short position"
+    },
+    {
+      "name": "costs_match_notional",
+      "passed": true,
+      "detail": "every executed trade is charged exactly notional x 0.001 (10.0 bps)"
+    },
+    {
+      "name": "risk_metrics_in_range",
+      "passed": true,
+      "detail": "max drawdown lies in [0, 1] and the Sharpe ratio is finite or explicitly null"
+    },
+    {
+      "name": "benchmarks_present",
+      "passed": true,
+      "detail": "buy-and-hold, the 5-session momentum rule and an all-cash floor share the test period"
+    }
+  ],
+  "limitations": [
+    "Historical simulation only: this is not a forecast and does not establish future profitability.",
+    "One instrument (SPY), one long-only position, whole shares, fills at the open with no slippage or liquidity model.",
+    "A single held-out test period of a few hundred sessions is a small sample; seed-to-seed spread is reported to make that visible.",
+    "PPO training is stochastic; results are reported per seed rather than as one tuned number.",
+    "The reward is portfolio return, so the agent optimises simulated profit, not risk-adjusted return or any real objective.",
+    "Models are not saved: the report records the algorithm, hyperparameters, data ranges and seeds for reproduction."
+  ],
+  "next_step": "Phase 7 \u2014 expose these Phase 1\u20136 artifacts through Flask and the dashboard, showing that the displayed values equal the saved experiment outputs."
+}
