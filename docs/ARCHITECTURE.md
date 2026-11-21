@@ -1,6 +1,6 @@
 # Architecture
 
-Basic system architecture for the **Geopolitical Event-Aware Stock Market Prediction and Trading** project. This describes the *target* design; components are implemented phase by phase per [ROADMAP.md](ROADMAP.md). **Phases 1 and 2 are implemented** — ingestion, cleaning, inspection, event classification, sentiment scoring, and the review/evaluation tooling live in `src/stock_project/` (§10 lists exactly what exists). Phase 2's **evaluation is pending human labels**; the `features/`, `models/`, `trading/`, `backend/`, and `frontend/` layers are still target design.
+Basic system architecture for the **Geopolitical Event-Aware Stock Market Prediction and Trading** project. This describes the *target* design; components are implemented phase by phase per [ROADMAP.md](ROADMAP.md). **Phases 1–3 are implemented** — ingestion, cleaning, inspection, event classification, sentiment scoring, the review/evaluation tooling, market feature engineering, chronological splitting, and the naive plus market-only baselines live in `src/stock_project/` (§10 lists exactly what exists). Phase 2's **evaluation is pending human labels**, and the `trading/`, `backend/`, and `frontend/` layers are still target design.
 
 - Specification: [PROJECT_DESCRIPTION.md](../PROJECT_DESCRIPTION.md)
 - Overview and setup: [README.md](../README.md)
@@ -95,7 +95,7 @@ Full field lists are in §6 of the specification. Summary of the two core tables
 - **Filtered news subset (interim, implemented):** `link, headline, category, short_description, authors, date` — the source columns for one publisher category inside the configured window, before validation.
 - **Classified news table (processed, implemented):** the Phase 1 contract plus `event_category, event_priority, matched_keywords, competing_categories, excluded_evidence, evidence_negated, conditional, classified_scope, matched_term_count, sentiment_label, sentiment_score, sentiment_terms`. Machine-generated baseline outputs — never presented as human labels. `event_category` is written by the classifier; the *human* label column lives only in `data/annotations/`.
 - **Review sheets (annotations, implemented):** `article_id, published_at, headline, source, source_category, sampling_reason, event_category, reviewer, reviewed_at, notes` — the label column is written empty and filled only by a human. `data/annotations/` is committed because hand labelling is expensive work that must not be lost or overwritten.
-- **Feature table (processed):** one row per (symbol, session) — lagged returns, MA/RSI/volatility, per-category article counts, mean sentiment, pos/neg/neutral counts, hours since last relevant article, `no_news` indicator, and the binary target.
+- **Feature table (processed, implemented for the market-only case):** `symbol, session_date, decision_time_utc, news_cutoff_utc`, market features, then `next_session_return, target`. One row per predicted session. Market features (Phase 3): `return_{1,5,20}d, sma_ratio_{10,50}, rsi_14, volatility_20, volume_ratio_20, intraday_range, overnight_gap` — each evaluated at the close of its bar and shifted forward one row, so the row for session `t` uses bars up to and including `t-1` only. `target = 1` when that session closes above the previous close. Warm-up rows are dropped and counted, never filled. The news columns (per-category counts, mean sentiment, pos/neg/neutral counts, time since last relevant article, `no_news`) arrive in Phase 4, keyed to `news_cutoff_utc`.
 
 Storage stays CSV/JSON on disk until a real need arises; MongoDB is explicitly a later option, not a default dependency.
 
@@ -135,8 +135,9 @@ Every rule in §3 has (or will have) an explicit, offline test — a comment is 
 
 | Invariant (§3) | Test that enforces it | Lands in |
 |---|---|---|
-| Chronological splits | Train/validation/test date ranges are strictly ordered and disjoint; no shuffling anywhere in the path | Phase 3 |
-| Prediction cutoff | Adding/changing a news row published after the cutoff leaves that session's feature row unchanged | Phase 4 |
+| Chronological splits | Train/validation/test date ranges are strictly ordered and disjoint; no shuffling anywhere in the path (`test_chronological_splits`, `test_train_baseline`) | Phase 3 — done |
+| Prediction cutoff (market) | Mutating prices at or after session `t` leaves row `t`'s features unchanged, while mutating earlier prices does change them (`test_mutating_the_predicted_session_leaves_its_features_untouched`, `test_features_do_depend_on_earlier_prices`) | Phase 3 — done |
+| Prediction cutoff (news) | Adding/changing a news row published after the cutoff leaves that session's feature row unchanged | Phase 4 |
 | No silent fills | Phase 1: per-column missing counts are reported, no value is imputed or forward-filled, and label columns stay empty. Phase 4: a session with no pre-cutoff articles gets all-zero counts **and** `no_news = 1` | Phase 1, completed in Phase 4 |
 | Day-level news timestamps | Every cleaned article has `available_from = published_at + 1 day`, so a same-day cutoff cannot leak post-cutoff news | Phase 1 (guard), consumed in Phase 4 |
 | Traceability | Every classified article still carries `article_id`, text, timestamp, and source, plus the matched keywords, competing categories, and vetoed evidence behind its label | Phase 2 (asserted in `test_clean_news_data`, `test_classify_news`) |
@@ -162,7 +163,7 @@ common  →  data  →  preprocessing  →  nlp / features  →  models / tradin
 
 Cross-layer imports that skip or reverse this order are a design bug even when the code runs — restructure or route through `common/` instead.
 
-## 10. Implementation status (Phase 1)
+## 10. Implementation status (Phases 1–3)
 
 Implemented and tested:
 
@@ -186,6 +187,9 @@ Implemented and tested:
 | `nlp/annotate.py` | CLI: deterministic random + stratified review sheets with empty labels; refuses to overwrite existing labels |
 | `nlp/labeller.py` | CLI + loopback-only HTTP UI: one headline at a time, keyboard shortcuts, atomic sheet writes, undo, and an append-only `<sheet>_labelling_log.jsonl` audit trail; blind by construction |
 | `nlp/evaluate_classifier.py` | CLI: per-class precision/recall/F1, balanced accuracy, kappa, naive baseline, error listing — `phase2_classifier_evaluation.json` |
+| `features/technical_indicators.py` | Returns, SMA distance, Wilder RSI, rolling volatility, volume ratio, intraday range, overnight gap — all shifted forward one row so the cutoff is structural; builds the target and writes the feature table |
+| `features/chronological_splits.py` | Ordered train/validation/test ranges (`int()` floor, deterministic) plus per-period rows, dates and class balance; no purge gap is needed because no row depends on another period |
+| `models/train_baseline.py` | CLI: naive majority baseline + `StandardScaler`+`LogisticRegression`, C chosen on validation only, refit on train+validation, one held-out test evaluation; metrics, standardised coefficients, eight pass/fail checks |
 
 Artifact contract:
 
@@ -200,9 +204,18 @@ Artifact contract:
   label, reviewer), so a reviewed sheet is always reconstructible.
 * `reports/experiment_results/phase2_classifier_evaluation.json` — metrics against human labels
   (or an explicit "no labels yet" record), plus `phase2_misclassifications.csv`.
+* `reports/experiment_results/phase3_baseline_report.json` — config snapshot, the cutoff and target
+  rules as text, feature definitions, the warm-up drop count, split ranges with dates and class
+  balance, naive and market-only metrics on validation and test, the C grid, standardised
+  coefficients, eight pass/fail checks, and the limitations.
+* `reports/experiment_results/phase3_test_predictions.csv` — one row per held-out session
+  (`session_date, decision_time_utc, next_session_return, target, probability_up, prediction,
+  correct`), so every reported test number traces to a date and a probability.
+* `data/processed/features_<SYMBOL>_<interval>.csv` — the feature table itself, also recorded in
+  `data/manifest.json` with its row/column contract.
 
 Paths inside every artifact are project-relative, so reports are diffable and portable. The
 backend/dashboard and later phases read these files — nothing re-derives numbers by hand.
 
-Not yet implemented (still target design): `features/`, `models/`, `trading/`, `backend/`,
-`frontend/`, and the supervised/RL experiment artifacts.
+Not yet implemented (still target design): `trading/`, `backend/`, `frontend/`, the news feature
+aggregation (`features/news_features.py`), the market+news comparison, and the RL experiment artifacts.

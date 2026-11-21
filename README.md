@@ -1,7 +1,7 @@
 # Geopolitical Event-Aware Stock Market Prediction and Trading
 
 > **AI/ML Mini Project · FinTech · Team of 2**
-> **Status:** Phase 1 complete; Phase 2 implemented (event classifier + sentiment baseline) with evaluation **pending the hand-labelled review sample** (label it with the bundled labeller, `python -m stock_project.nlp.labeller`) — 178 tests passing. See [docs/ROADMAP.md](docs/ROADMAP.md) for live progress, [docs/annotation_guidelines.md](docs/annotation_guidelines.md) for the labelling rules, [docs/dataset_notes.md](docs/dataset_notes.md) for the datasets, and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design.
+> **Status:** Phase 1 complete; Phase 2 implemented (event classifier + sentiment baseline) with evaluation **pending the hand-labelled review sample** (label it with the bundled labeller, `python -m stock_project.nlp.labeller`); Phase 3 baseline complete — market features, a chronological 846/181/182 split, and a naive vs. market-only comparison whose honest result is **no meaningful skill** (test balanced accuracy 0.506 vs. naive 0.500). 206 tests passing. See [docs/ROADMAP.md](docs/ROADMAP.md) for live progress, [docs/annotation_guidelines.md](docs/annotation_guidelines.md) for the labelling rules, [docs/dataset_notes.md](docs/dataset_notes.md) for the datasets, and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design.
 > **Disclaimer:** This is a research and *simulated* trading prototype. It does not provide financial advice, does not execute real trades, and makes no claim of reliable price prediction.
 
 ## Overview
@@ -64,15 +64,18 @@ geopolitical-stock-predictor/
 │   ├── preprocessing/          # clean_market_data.py, clean_news_data.py
 │   ├── nlp/                    # taxonomy.py, event_classifier.py, sentiment.py,
 │   │                           # classify_news.py, annotate.py, labeller.py, evaluate_classifier.py
-│   ├── features/               # (planned, Phase 3) technical_indicators.py, news_features.py
-│   ├── models/                 # (planned, Phase 3-4) train_baseline.py, train_news_aware.py
+│   ├── features/               # technical_indicators.py, chronological_splits.py
+│   │                           # (news_features.py planned, Phase 4)
+│   ├── models/                 # train_baseline.py (train_news_aware.py planned, Phase 4)
 │   └── trading/                # (planned, Phase 5-6) simulator.py, gym_env.py, train_rl.py
 ├── tests/
 │   ├── conftest.py             # Offline fixtures (synthetic, hand-checkable)
 │   ├── fixtures/               # Tiny CSV/JSONL fixtures used by the tests
-│   └── test_*.py               # 13 modules: config, ingestion, cleaning, inspection, nlp
+│   └── test_*.py               # 16 modules: config, ingestion, cleaning, inspection, nlp,
+│                               # features, baselines
 ├── reports/
-│   ├── experiment_results/     # phase1_data_report.json, phase2_*.json, misclassifications
+│   ├── experiment_results/     # phase1_data_report.json, phase2_*.json,
+│   │                           # phase3_baseline_report.json, phase3_test_predictions.csv
 │   └── figures/
 └── docs/
     ├── ARCHITECTURE.md         # System design: data flow, layers, invariants, contracts
@@ -82,7 +85,7 @@ geopolitical-stock-predictor/
     └── model_evaluation.md     # (planned, Phase 3+)
 ```
 
-*(Phase 1 created the parts shown without a `(planned…)` marker. `notebooks/`, `backend/`,
+*(Phases 1–3 created the parts shown without a `(planned…)` marker. `notebooks/`, `backend/`,
 and `frontend/` arrive in later phases, as does the rest of `src/stock_project/`.)*
 
 ## Development phases
@@ -93,7 +96,7 @@ Full detail, checklists, and the running change log live in **[docs/ROADMAP.md](
 |---|---|---|---|
 | 1 | Define and inspect data | Documented, reproducible sample datasets | **Done** — see [docs/dataset_notes.md](docs/dataset_notes.md) |
 | 2 | News classification and sentiment | News dataset with traceable category/sentiment outputs | **Implemented** — evaluation pending hand labels |
-| 3 | Market features and baseline prediction | Reproducible baseline metrics | Planned |
+| 3 | Market features and baseline prediction | Reproducible baseline metrics | **Done** — [phase3_baseline_report.json](reports/experiment_results/phase3_baseline_report.json); no skill over the naive baseline |
 | 4 | Add geopolitical features | Fair market-only vs market+news comparison | Planned |
 | 5 | Trading simulator | Tested historical simulator | Planned |
 | 6 | Reinforcement learning | RL evaluation report with metrics and limitations | Planned |
@@ -157,14 +160,30 @@ The labeller binds loopback only, never shows the classifier's prediction (label
 blind), rejects anything outside the taxonomy, and skips stay blank — an unreviewed row is
 never counted as a correct one.
 
+### Running Phase 3 (done)
+
+```bash
+# Build market features, split chronologically, train the naive and market-only
+# baselines, and write the artifacts (offline; reads the Phase 1 cleaned table)
+python -m stock_project.models.train_baseline --config configs/config.example.yaml
+```
+
+Writes `data/processed/features_SPY_1d.csv` (also recorded in `data/manifest.json`),
+[`reports/experiment_results/phase3_baseline_report.json`](reports/experiment_results/phase3_baseline_report.json)
+and `phase3_test_predictions.csv`. Every feature in the row for session `t` uses bars only up to
+`t-1`; the target is that session's own direction, so the split needs no purge gap. The model's C is
+chosen on validation data only and the test period is evaluated once.
+
 Concrete commands for later stages will be added here as those stages land (tracked in the roadmap).
 
 ## Testing
 
-**Current state:** 178 tests, all passing (`178 passed` via `pytest`), covering configuration
+**Current state:** 206 tests, all passing (`206 passed` via `pytest`), covering configuration
 validation, market and news ingestion, cleaning/validation, the Phase 1 inspection artifact,
-and the Phase 2 machinery (taxonomy integrity, rule classifier, sentiment baseline, review
-sheets, the interactive labeller, metrics). No test touches the network.
+the Phase 2 machinery (taxonomy integrity, rule classifier, sentiment baseline, review
+sheets, the interactive labeller, metrics), and the Phase 3 features and baselines (hand-computed
+indicator values, cutoff/leakage guards, chronological splits, metric definitions, and the
+baseline artifact contract). No test touches the network.
 
 ```bash
 pytest          # or: pytest -q
@@ -174,7 +193,7 @@ The specification requires, at minimum: date/timezone parsing checks, duplicate 
 
 The suite must run offline and deterministically — no test may download market or news data — and this section is kept in sync with it (how to run, how many tests, what they cover) as each phase lands.
 
-What the current 178 tests cover:
+What the current 206 tests cover:
 
 | Module | Coverage |
 |---|---|
@@ -191,6 +210,9 @@ What the current 178 tests cover:
 | `tests/test_annotate.py` | Sheet determinism, blank labels, blind by default, focus-sheet strata, and refusal to overwrite human labels |
 | `tests/test_evaluate_classifier.py` | Hand-computed precision/recall/F1, balanced accuracy, kappa, naive baseline, label validation, unreviewed handling |
 | `tests/test_labeller.py` | Interactive labeller: taxonomy guard, atomic sheet rewrites, undo, audit log, blind browser payload, served-page JS escape regression, HTTP round-trip, loopback-only binding |
+| `tests/test_technical_indicators.py` | Hand-computed returns, SMA distance, Wilder RSI (incl. flat/rising/falling edge cases), volatility, volume ratio, range/gap; the cutoff guard (future prices cannot change a row, history must), and the feature-table contract |
+| `tests/test_chronological_splits.py` | Contiguous ordered ranges, deterministic floors, invalid fractions rejected, periods time-ordered and disjoint |
+| `tests/test_train_baseline.py` | Hand-computed precision/recall/F1/balanced accuracy and AUC, the artifact contract (report, predictions, manifest), determinism, and missing-input error path |
 
 ## Limitations and responsible use
 

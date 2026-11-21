@@ -8,7 +8,7 @@ Living progress tracker for the **Geopolitical Event-Aware Stock Market Predicti
 - Setup and overview: [README.md](../README.md).
 - Target design: [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Overall status:** Phase 2 — News classification and sentiment — **implemented, evaluation pending human labels**. **178/178 tests passing** (`pytest` → `178 passed`). Pipeline: `SPY` daily bars (1,259 sessions) + 5,930 classified articles (taxonomy v1.1), with `phase1_data_report.json`, `phase2_classification_report.json`, `phase2_annotation_sheets.json` and `phase2_classifier_evaluation.json` written. **Blocker:** the review sheets (200 random + 60 focus rows) contain no labels yet, so no precision/recall/F1 has been reported. **Next action:** a human runs `python -m stock_project.nlp.labeller --reviewer "<name>"` (one headline at a time, keys 1-6, `s` skip, `u` undo; writes only what they press, blind by design), then `python -m stock_project.nlp.evaluate_classifier`.
+**Overall status:** Phase 3 — Market features and baseline prediction — **complete and verified**; Phase 2's evaluation is still **blocked on human labels**. **206/206 tests passing** (`pytest` → `206 passed`). Pipeline: `SPY` daily bars (1,259 sessions) → **1,209 feature rows** (10 market features, 50 warm-up rows dropped) → chronological 846/181/182 split → naive majority vs. logistic-regression baseline, with `phase1_data_report.json`, `phase2_*.json`, `phase3_baseline_report.json` and `phase3_test_predictions.csv` written. **Headline honest result:** on the held-out period the market-only model scores balanced accuracy 0.506 vs. the naive baseline's 0.500 — no meaningful skill. **Phase 2 blocker (unchanged):** the review sheets (200 random + 60 focus rows) still contain 0 labels, so no classifier precision/recall/F1 exists. **Next actions:** (1) a human runs `python -m stock_project.nlp.labeller --reviewer "<name>"` (keys 1-6, `s` skip, `u` undo; blind by design), then `python -m stock_project.nlp.evaluate_classifier`; (2) Phase 4 — add pre-cutoff news features and compare against this baseline.
 
 ---
 
@@ -47,12 +47,18 @@ Living progress tracker for the **Geopolitical Event-Aware Stock Market Predicti
 
 **Goal:** reproducible baseline metrics.
 
-- [ ] Clean market data; compute returns, moving averages, RSI, volatility.
-- [ ] Define the prediction cutoff and the next-session binary target.
-- [ ] Train a naive/majority baseline and a market-only model (Logistic Regression or Random Forest).
-- [ ] Evaluate with chronological train/validation/test splits — no shuffling.
-- [ ] Report accuracy, precision, recall, F1, balanced accuracy against the naive baseline.
-- [ ] Leakage checks: no future prices, future news, or revised data in features.
+**Status:** complete (2026-11-21). 1,209 feature rows from 1,259 SPY sessions; 846/181/182
+chronological split; artifacts in
+[reports/experiment_results/phase3_baseline_report.json](../reports/experiment_results/phase3_baseline_report.json)
+and `phase3_test_predictions.csv`. The baseline is **weak on purpose-of-reporting**: test balanced
+accuracy 0.506 (model) vs 0.500 (naive) is not distinguishable from noise at this sample size.
+
+- [x] Clean market data; compute returns, moving averages, RSI, volatility. — `features/technical_indicators.py`: `return_{1,5,20}d`, `sma_ratio_{10,50}`, Wilder `rsi_14`, `volatility_20` (sample stdev of simple returns, not annualised), `volume_ratio_20`, `intraday_range`, `overnight_gap`. Hand-computed expected values in `tests/test_technical_indicators.py`.
+- [x] Define the prediction cutoff and the next-session binary target. — Row for session `t` is decided pre-open at that session's timestamp; every feature is evaluated at the close of its bar and shifted forward one row, so it uses bars ≤ `t-1`. `target = 1` iff `close[t] > close[t-1]`; `next_session_return` stored beside it; `news_cutoff_utc` carried for Phase 4. Validated in config by `prediction.cutoff_time`, which parse-tests reject if malformed.
+- [x] Train a naive/majority baseline and a market-only model (Logistic Regression or Random Forest). — `models/train_baseline.py`: majority-class baseline and `StandardScaler` + `LogisticRegression`, C selected on validation only then refit on train+validation.
+- [x] Evaluate with chronological train/validation/test splits — no shuffling. — `features/chronological_splits.py`, `int()` floors for determinism, contiguous ranges covering every row once; asserted in `tests/test_chronological_splits.py`.
+- [x] Report accuracy, precision, recall, F1, balanced accuracy against the naive baseline. — Test: naive acc 0.429 / bal-acc 0.500 / F1 0.600; model acc 0.445 / bal-acc 0.506 / precision 0.432 / recall 0.936 / F1 0.591 / ROC-AUC 0.5316. The model predicts "up" on 169 of 182 sessions, and its validation bal-acc (0.495) was below chance — reported as such, not spun.
+- [x] Leakage checks: no future prices, future news, or revised data in features. — Real assertions, not comments: mutating prices at/after session `t` leaves row `t`'s features unchanged; mutating earlier prices does change them; the target still responds to the predicted session's own close. Plus artifact checks `features_exclude_target`, `target_matches_return_sign`, `model_fit_rows_exclude_test`.
 
 ## Phase 4 — Add geopolitical features
 
@@ -116,6 +122,20 @@ Mirrors §19 of the specification — the project is complete when:
 ## Change Log
 
 Newest first. Every substantive action gets an entry: date, what changed, files touched, and verification.
+
+### 2026-11-21
+
+- **Phase 3 implemented and evaluated: market features, chronological splits, and a market-only baseline.** All six Phase 3 checklist items ticked. Phase 2's two human-label boxes remain open and are **not** affected by this work.
+  - **Features (`features/technical_indicators.py`):** `return_{1,5,20}d`, `sma_ratio_{10,50}`, `rsi_14` (Wilder), `volatility_20` (sample stdev of simple returns, not annualised), `volume_ratio_20`, `intraday_range`, `overnight_gap`. Every indicator is evaluated at the close of its bar and **shifted forward one row**, so a row for session `t` uses bars up to and including `t-1` only. The target is that session's own direction (`target = 1` iff `close[t] > close[t-1]`), with `next_session_return` stored beside it. `news_cutoff_utc` (= session date at `prediction.cutoff_time`) is carried now, so Phase 4 has an explicit contract: day-precision news published on the previous day at the latest.
+  - **Splits (`features/chronological_splits.py`):** ordered, contiguous ranges apportioned with `int()` floor (deterministic across platforms), covering every row exactly once. No purge gap is needed, and the docs say why: no row depends on another row's period.
+  - **Baseline (`models/train_baseline.py`):** naive majority baseline plus `StandardScaler` + `LogisticRegression`; C chosen on the validation period only (balanced accuracy), then refit on train+validation and evaluated **once** on the held-out test period. Eight pass/fail checks are written into the artifact.
+  - **Config:** new validated `features`, `splits` and `model` sections (`configs/config.example.yaml`, strict parsing in `common/config.py`); they are now required sections, so an older config lacking them fails loudly instead of silently defaulting.
+  - **Real run** (`python -m stock_project.models.train_baseline --config configs/config.example.yaml`): 1,259 cleaned sessions → **1,209 feature rows** (2018-03-15…2022-12-30, 50 warm-up rows dropped, 10 features). Splits: train 846 (2018-03-15…2021-07-23, up-rate 0.565), validation 181 (2021-07-26…2022-04-11, 0.525), test 182 (2022-04-12…2022-12-30, up-rate 0.429). Naive majority predicted "up" (the training majority class) on every test row.
+  - **Honest result — the market-only model shows essentially no skill.** Test: naive accuracy 0.429 / balanced accuracy 0.500; model accuracy 0.445 / balanced accuracy 0.506 / precision 0.432 / recall 0.936 / F1 0.591 / ROC-AUC 0.5316, predicting "up" on 169 of 182 sessions (confusion: 8 TN, 96 FP, 5 FN, 73 TP). On the **validation** period the selected C=0.01 scored balanced accuracy 0.4953 — below chance. With 182 test sessions this is not distinguishable from noise, and the report says so: a baseline measurement, not evidence of predictive skill. Top standardised coefficients: `volume_ratio_20` (−0.094), `overnight_gap` (−0.093).
+  - **Files touched:** new `src/stock_project/features/{__init__,technical_indicators,chronological_splits}.py`, `src/stock_project/models/{__init__,train_baseline}.py`; new `tests/test_technical_indicators.py`, `tests/test_chronological_splits.py`, `tests/test_train_baseline.py`; edited `src/stock_project/common/config.py`, `configs/config.example.yaml`, `tests/conftest.py`. Artifacts written: `data/processed/features_SPY_1d.csv` (git-ignored, manifest entry `processed:features:SPY:1d`), `reports/experiment_results/phase3_baseline_report.json`, `phase3_test_predictions.csv`.
+  - **Verified:** `pytest` → **206 passed** (exit 0), up from 178; the three new modules alone → 28 passing. The CLI exits 0 and all eight Phase 3 checks PASS. Leakage guards are real assertions (future prices mutated → row features unchanged; historical prices mutated → features change; predicted session's close changed → target changes).
+  - **Docs:** this file (status, Phase 3 checklist, change log), README (status, tree, phase table, Phase 3 run commands, 206-test coverage), ARCHITECTURE (status, feature-table contract, invariant→test map, module table, artifact contract), AGENTS.md current-state line.
+  - **Still open (human step, unchanged):** Phase 2 boxes 2 and 4. 0/200 labels exist and this change does not fill them — no classifier metrics are reported.
 
 ### 2026-11-02
 

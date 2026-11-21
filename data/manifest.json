@@ -1,6 +1,6 @@
 {
   "manifest_version": 1,
-  "updated_at_utc": "2026-11-02T13:43:10Z",
+  "updated_at_utc": "2026-11-21T08:16:13Z",
   "datasets": {
     "classified:news:heegyu/news-category-dataset": {
       "key": "classified:news:heegyu/news-category-dataset",
@@ -103,6 +103,48 @@
       "notes": [
         "Raw download, stored unmodified; the subset used by the project is filtered in data/interim/.",
         "JSON Lines: one JSON object per line."
+      ]
+    },
+    "processed:features:SPY:1d": {
+      "key": "processed:features:SPY:1d",
+      "name": "market features and next-session target (SPY 1d)",
+      "file": "data/processed/features_SPY_1d.csv",
+      "sha256": "98172ef800e81eeb2276f457cfde3cbbcba811add7c745abcfdef0eb6f3b02b9",
+      "size_bytes": 346932,
+      "retrieved_at_utc": "2026-11-21T08:16:13Z",
+      "source": "data/processed/market_SPY_1d_clean.csv",
+      "url": null,
+      "dataset_id": null,
+      "revision": null,
+      "license": null,
+      "license_url": null,
+      "rows": 1209,
+      "columns": [
+        "symbol",
+        "session_date",
+        "decision_time_utc",
+        "news_cutoff_utc",
+        "return_1d",
+        "return_5d",
+        "return_20d",
+        "sma_ratio_10",
+        "sma_ratio_50",
+        "rsi_14",
+        "volatility_20",
+        "volume_ratio_20",
+        "intraday_range",
+        "overnight_gap",
+        "next_session_return",
+        "target"
+      ],
+      "date_coverage": [
+        "2018-03-15",
+        "2022-12-30"
+      ],
+      "notes": [
+        "Derived by features.technical_indicators from the cleaned market table.",
+        "50 warm-up row(s) dropped; no imputation.",
+        "Features use bars up to and including t-1 for the session t row (invariant 2)."
       ]
     },
     "processed:market:SPY:1d": {

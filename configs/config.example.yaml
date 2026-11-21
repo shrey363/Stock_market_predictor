@@ -52,9 +52,33 @@ nlp:
   review_sample_size: 200
   review_sample_seed: 42
 
+features:
+  # Phase 3 market-only features. Each is evaluated at the close of its bar and then
+  # shifted forward one row, so a row for session t uses bars up to and including t-1
+  # only (docs/ARCHITECTURE.md §3, invariant 2). Warm-up rows are dropped, never filled.
+  return_windows: [1, 5, 20]
+  moving_average_windows: [10, 50]
+  rsi_window: 14
+  volatility_window: 20
+  volume_window: 20
+
+splits:
+  # Chronological cut of the feature rows; the test period is the remainder and is
+  # evaluated once, after model selection. Rows are never shuffled.
+  train_fraction: 0.70
+  validation_fraction: 0.15
+
+model:
+  # One model family for the baseline; Phase 4 reuses it with news features added so
+  # the market-only and market+news runs stay comparable.
+  type: "logistic_regression"
+  c_values: [0.01, 0.1, 1.0, 10.0]
+  max_iter: 2000
+  selection_metric: "balanced_accuracy"
+
 prediction:
-  # Used from Phase 3 onward: everything in a feature row must be strictly earlier
-  # than this cutoff on the prediction day.
+  # Everything in a feature row must be strictly earlier than this cutoff on the
+  # prediction day; day-precision news is therefore usable from the next day onward.
   cutoff_time: "00:00"
   target: "next_session_return_positive"
 
