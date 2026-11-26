@@ -8,7 +8,7 @@ Living progress tracker for the **Geopolitical Event-Aware Stock Market Predicti
 - Setup and overview: [README.md](../README.md).
 - Target design: [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Overall status:** Phases 1–6 are implemented and verified; Phase 7's read-only Flask API and React + Plotly dashboard are implemented. The **5 new Phase 7 contract tests pass**; the last complete project-venv run before Phase 7 was **250/250 passing**, while the post-Phase-7 full-suite rerun is still required before final completion (a global-Anaconda run is invalid because it lacks Gymnasium). Pipeline: `SPY` daily bars (1,259 sessions) → 1,209 feature rows → chronological 846/181/182 split → supervised comparisons, deterministic simulation, and PPO. Honest results: the news classifier is weak on rare classes; market+news balanced accuracy **0.514** vs. market-only **0.506** is indistinguishable from noise; Phase 5 momentum loses **33.13%**; Phase 6 PPO averages **−4.94%** on the held-out period (seed range **+0.84% to −8.14%**) and is not reliably better than cash. **Next action:** run the complete suite in `.venv`, launch/inspect the dashboard, refresh Graphify, then mark Phase 7 and the project complete.
+**Overall status:** Phases 1–6 are implemented and verified; Phase 7's read-only Flask API and React + Plotly dashboard are implemented. The **6 Phase 7 contract tests pass**; the last complete project-venv run before Phase 7 was **250/250 passing**, while the post-Phase-7 full-suite rerun is still required before final completion (a global-Anaconda run is invalid because it lacks Gymnasium). Pipeline: `SPY` daily bars (1,259 sessions) → 1,209 feature rows → chronological 846/181/182 split → supervised comparisons, deterministic simulation, and PPO. Honest results: the news classifier is weak on rare classes; market+news balanced accuracy **0.514** vs. market-only **0.506** is indistinguishable from noise; Phase 5 momentum loses **33.13%**; Phase 6 PPO averages **−4.94%** on the held-out period (seed range **+0.84% to −8.14%**) and is not reliably better than cash. **Next action:** run the complete suite in `.venv`, launch/inspect the dashboard, refresh Graphify, then mark Phase 7 and the project complete.
 
 ---
 
@@ -114,9 +114,9 @@ buy-and-hold **+42.53%** (1 trade, 99.64 costs, 34.03% max drawdown); momentum-5
 - [x] Expose data, predictions, comparisons, and simulation results through Flask. — six read-only endpoints consume saved Phase 1–6 CSV/JSON artifacts; requests never train or simulate.
 - [x] Build the React + Plotly dashboard (or agreed alternative). — one responsive `frontend/index.html`, served by Flask; no Node build chain.
 - [x] Sections: market overview, news explorer, prediction view, model comparison, trading simulation, methodology & limitations.
-- [x] Test the complete workflow from input data to displayed results; verify dashboard values match saved experiment outputs. — five focused tests pass for exact API values, all routes, read-only methods, filters/pagination, missing artifacts, and required dashboard sections. Full-suite and browser smoke remain the final completion gate.
-- [ ] Document setup, reproduction commands, and limitations in the README.
-- [ ] Compile the final report including failed experiments and honest caveats.
+- [x] Test the complete workflow from input data to displayed results; verify dashboard values match saved experiment outputs. — six focused tests pass for exact API values, all routes, read-only methods, filters/pagination, missing artifacts, required dashboard sections, and inline JavaScript syntax. Full-suite and browser smoke remain the final completion gate.
+- [x] Document setup, reproduction commands, and limitations in the README. — Phase 6/7 commands, local-only/read-only behavior, CDN requirement, testing state and limitations are explicit.
+- [x] Compile the final report including failed experiments and honest caveats. — `docs/FINAL_REPORT.md` records weak classification, inconclusive news features, failed momentum, seed-sensitive PPO, scope limits and reproduction.
 
 ---
 
@@ -124,21 +124,25 @@ buy-and-hold **+42.53%** (1 trade, 99.64 costs, 34.03% max drawdown); momentum-5
 
 Mirrors §19 of the specification — the project is complete when:
 
-- [ ] Data sources and preparation steps are documented.
-- [ ] Event labels and sentiment outputs can be inspected.
-- [ ] Market-only and market-plus-news models are evaluated fairly.
-- [ ] Leakage checks and chronological splitting are documented.
-- [ ] The trading simulator passes basic correctness tests.
-- [ ] The RL agent is compared against simple baselines on held-out data.
-- [ ] Dashboard results agree with experiment outputs.
-- [ ] The repository contains setup instructions and reproducible commands.
-- [ ] Limitations and unsuccessful experiments are included in the final report.
+- [x] Data sources and preparation steps are documented.
+- [x] Event labels and sentiment outputs can be inspected.
+- [x] Market-only and market-plus-news models are evaluated fairly.
+- [x] Leakage checks and chronological splitting are documented.
+- [x] The trading simulator passes basic correctness tests.
+- [x] The RL agent is compared against simple baselines on held-out data.
+- [x] Dashboard results agree with experiment outputs.
+- [x] The repository contains setup instructions and reproducible commands.
+- [x] Limitations and unsuccessful experiments are included in the final report.
 
 ---
 
 ## Change Log
 
 Newest first. Every substantive action gets an entry: date, what changed, files touched, and verification.
+
+### 2026-11-22
+
+- **Phase 7 documentation and artifact-view contract completed; release verification remains.** Added `docs/FINAL_REPORT.md` with the supervised, simulator and PPO results, failed/inconclusive experiments, limitations and reproduction; linked it from README; added `Cache-Control: no-store` so API/dashboard responses cannot show stale experiment artifacts; selected chart colors from the active light/dark CSS palette. The focused Phase 7 suite passes (**6 passed**, including Node parsing of every inline dashboard script) and `git diff --check` is clean apart from informational LF→CRLF notices. Fixed two independent inline-JavaScript parenthesis errors exposed first by the browser and then by the new Node syntax guard; added an inline favicon to remove the harmless 404. The command safety service still blocks the explicit `.venv` full-suite launch, real server process and `graphify update .`; those remain the release gates and are not reported as passing.
 
 ### 2026-11-21
 

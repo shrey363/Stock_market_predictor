@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import re
+import shutil
+import subprocess
 
 import pandas as pd
 import pytest
@@ -97,6 +100,7 @@ def test_missing_artifact_is_an_actionable_service_error(client, phase7_root: Pa
 def test_dashboard_is_served_and_names_every_required_section(client):
     response = client.get("/")
     assert response.status_code == 200
+    assert response.headers["Cache-Control"] == "no-store"
     assert b"Dashboard fixture" in response.data
 
 
@@ -109,3 +113,17 @@ def test_real_dashboard_reads_api_routes_and_contains_responsible_use_copy():
     assert "not a trading signal" in page
     assert "Accessible table view" in page
     assert "ReactDOM.createRoot" in page and "Plotly.react" in page
+    assert 'rel="icon"' in page
+
+
+def test_inline_dashboard_javascript_parses_when_node_is_available():
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node is optional; browser assets have no local build step")
+    page = (Path(__file__).parents[1] / "frontend" / "index.html").read_text(encoding="utf-8")
+    scripts = [source for source in re.findall(r"<script(?: [^>]*)?>([\s\S]*?)</script>", page) if source.strip()]
+    for source in scripts:
+        result = subprocess.run(
+            [node, "--check", "-"], input=source.encode("utf-8"), capture_output=True, check=False
+        )
+        assert result.returncode == 0, result.stderr.decode("utf-8", errors="replace")

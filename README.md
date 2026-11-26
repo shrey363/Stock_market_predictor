@@ -1,7 +1,7 @@
 # Geopolitical Event-Aware Stock Market Prediction and Trading
 
 > **AI/ML Mini Project · FinTech · Team of 2**
-> **Status:** Phases 1–6 complete; Phase 7 API/dashboard implemented with its 5 focused tests passing, pending the final project-venv suite/browser gate. Honest results: the rule classifier's balanced accuracy is **0.423**; market+news **0.514** vs. market-only **0.506** is no distinguishable skill; momentum loses **33.13%**; PPO averages **−4.94%** on held-out data with seed returns from **+0.84% to −8.14%**, so it does not reliably beat cash. See [docs/ROADMAP.md](docs/ROADMAP.md) for live verification state and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design.
+> **Status:** Phases 1–6 complete; Phase 7 API/dashboard implemented with its 6 focused tests passing, pending the final project-venv suite/browser gate. Honest results: the rule classifier's balanced accuracy is **0.423**; market+news **0.514** vs. market-only **0.506** is no distinguishable skill; momentum loses **33.13%**; PPO averages **−4.94%** on held-out data with seed returns from **+0.84% to −8.14%**, so it does not reliably beat cash. See [docs/ROADMAP.md](docs/ROADMAP.md) for live verification state and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design.
 > **Disclaimer:** This is a research and *simulated* trading prototype. It does not provide financial advice, does not execute real trades, and makes no claim of reliable price prediction.
 
 ## Overview
@@ -84,6 +84,7 @@ geopolitical-stock-predictor/
 │   └── figures/
 └── docs/
     ├── ARCHITECTURE.md         # System design: data flow, layers, invariants, contracts
+    ├── FINAL_REPORT.md         # Results, failures, caveats, and reproduction summary
     ├── ROADMAP.md              # Live progress log — updated with every change
     ├── dataset_notes.md        # Dataset provenance, licences, coverage, gaps
     ├── annotation_guidelines.md # Event taxonomy, tie-breaks, labelling workflow (Phase 2)
@@ -237,7 +238,7 @@ The Flask application exposes `/market`, `/news`, `/predictions`, `/models`, `/s
 
 ## Testing
 
-**Current state:** the last complete project-venv run before Phase 7 was **250 passing**. Phase 7 adds **5 focused tests, all passing**; rerun the full suite in `.venv` before final release. Coverage includes configuration, ingestion, cleaning, NLP, leakage-safe features, chronological supervised comparisons, deterministic trading, the Gymnasium/PPO protocol, and exact agreement between API values and saved artifacts. No test touches the network.
+**Current state:** the last complete project-venv run before Phase 7 was **250 passing**. Phase 7 adds **6 focused tests, all passing**; rerun the full suite in `.venv` before final release. Coverage includes configuration, ingestion, cleaning, NLP, leakage-safe features, chronological supervised comparisons, deterministic trading, the Gymnasium/PPO protocol, and exact agreement between API values and saved artifacts. No test touches the network.
 
 ```bash
 pytest          # or: pytest -q
@@ -287,5 +288,6 @@ Treat every number this project produces as a model output for study — never a
 
 - [PROJECT_DESCRIPTION.md](PROJECT_DESCRIPTION.md) — full specification, schema, milestones, and risk register.
 - [docs/ROADMAP.md](docs/ROADMAP.md) — step-by-step progress and change log.
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — target architecture: data flow, layers, design invariants, API surface.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — implemented architecture: data flow, layers, design invariants, API surface.
+- [docs/FINAL_REPORT.md](docs/FINAL_REPORT.md) — final results, failed experiments, limitations, and reproduction summary.
 - [AGENTS.md](AGENTS.md) — operating rules for coding agents: doc-update duties, testing and data conventions, guardrails.

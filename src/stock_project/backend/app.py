@@ -78,6 +78,11 @@ def create_app(config: Config | None = None, *, root: Path | str | None = None) 
     def invalid_request(error: ValueError):
         return jsonify({"error": "invalid_request", "detail": str(error)}), 400
 
+    @app.after_request
+    def no_cache(response):
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
     @app.get("/")
     def dashboard():
         return send_from_directory(frontend, "index.html")
