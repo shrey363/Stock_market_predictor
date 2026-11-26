@@ -20,3 +20,5 @@ data/raw/
 # data/manifest.json *is* committed: it is the small provenance record.
 data/interim/
 data/processed/
+
+graphify-out/

@@ -12,6 +12,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 import pytest
 import yaml
@@ -54,8 +55,24 @@ BASE_CONFIG: dict[str, Any] = {
         "review_sample_size": 5,
         "review_sample_seed": 3,
     },
+    "features": {
+        "return_windows": [1, 2],
+        "moving_average_windows": [2],
+        "rsi_window": 2,
+        "volatility_window": 2,
+        "volume_window": 2,
+        "news_lookback_days": 7,
+    },
+    "splits": {"train_fraction": 0.6, "validation_fraction": 0.2},
+    "model": {
+        "type": "logistic_regression",
+        "c_values": [0.1, 1.0],
+        "max_iter": 200,
+        "selection_metric": "balanced_accuracy",
+    },
     "prediction": {"cutoff_time": "00:00", "target": "next_session_return_positive"},
     "trading": {"initial_capital": 100000.0, "transaction_cost_bps": 10.0, "position_fraction": 1.0},
+    "rl": {"total_timesteps": 256, "seeds": [0, 1]},
 }
 
 
@@ -154,6 +171,36 @@ CLASSIFIABLE_HEADLINES: tuple[tuple[str, str], ...] = (
     ("threat", "Trump threatens tariffs on Chinese goods"),
     ("denial", "No new sanctions expected, official says"),
 )
+
+
+@pytest.fixture
+def synthetic_market():
+    """Build a deterministic, seeded market frame shaped like the cleaned table.
+
+    Seeded so tests never depend on the wall clock or on real downloads; the walk is
+    synthetic and is never presented as market data.
+    """
+
+    def _build(rows: int = 220, *, seed: int = 0, start: str = "2020-01-01") -> pd.DataFrame:
+        rng = np.random.default_rng(seed)
+        steps = rng.normal(0.0004, 0.01, rows)
+        close = 300.0 * np.cumprod(1.0 + steps)
+        timestamps = pd.date_range(start, periods=rows, freq="B", tz="UTC") + pd.Timedelta(hours=5)
+        return pd.DataFrame(
+            {
+                "symbol": "SPY",
+                "timestamp": timestamps,
+                "open": close * 0.999,
+                "high": close * 1.005,
+                "low": close * 0.995,
+                "close": close,
+                "adj_close": close,
+                "volume": rng.integers(50_000_000, 90_000_000, rows).astype("int64"),
+                "source": "synthetic fixture (not market data)",
+            }
+        )
+
+    return _build
 
 
 @pytest.fixture

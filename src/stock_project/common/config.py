@@ -18,13 +18,19 @@ from .errors import ConfigError
 from .paths import configs_dir, relative_to_root
 
 SUPPORTED_TIMEZONE = "UTC"
-REQUIRED_SECTIONS = ("project", "data", "nlp", "prediction", "trading")
+REQUIRED_SECTIONS = ("project", "data", "nlp", "features", "splits", "model", "prediction", "trading", "rl")
 
 #: Supported NLP text scopes (Phase 2 classifies headlines by default).
 TEXT_SCOPES = ("headline", "headline+description")
 
 #: Sentiment modes. "lexicon" is implemented; "finbert" is a documented, not-yet-wired option.
 SENTIMENT_MODES = ("lexicon", "finbert")
+
+#: Model families implemented for the Phase 3 baseline (one, deliberately).
+MODEL_TYPES = ("logistic_regression",)
+
+#: Metrics allowed when choosing the regularisation strength on validation data.
+SELECTION_METRICS = ("balanced_accuracy", "f1", "accuracy")
 
 
 def parse_iso_date(value: Any, *, where: str) -> date:
@@ -73,6 +79,38 @@ def _require_number(section: Mapping[str, Any], key: str, *, where: str) -> floa
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ConfigError(f"{key!r} in {where} must be a number, got {value!r}")
     return float(value)
+
+
+def _require_int_list(
+    section: Mapping[str, Any], key: str, *, where: str, minimum: int = 1
+) -> tuple[int, ...]:
+    value = _require(section, key, where=where)
+    if not isinstance(value, (list, tuple)) or not value:
+        raise ConfigError(f"{key!r} in {where} must be a non-empty list of integers")
+    parsed: list[int] = []
+    for item in value:
+        if isinstance(item, bool) or not isinstance(item, int):
+            raise ConfigError(f"{key!r} in {where} must contain integers only, got {item!r}")
+        if item < minimum:
+            raise ConfigError(f"{key!r} in {where} values must be >= {minimum}, got {item}")
+        parsed.append(item)
+    if len(set(parsed)) != len(parsed):
+        raise ConfigError(f"{key!r} in {where} must not repeat a window: {value!r}")
+    return tuple(parsed)
+
+
+def _require_number_list(section: Mapping[str, Any], key: str, *, where: str) -> tuple[float, ...]:
+    value = _require(section, key, where=where)
+    if not isinstance(value, (list, tuple)) or not value:
+        raise ConfigError(f"{key!r} in {where} must be a non-empty list of numbers")
+    parsed: list[float] = []
+    for item in value:
+        if isinstance(item, bool) or not isinstance(item, (int, float)):
+            raise ConfigError(f"{key!r} in {where} must contain numbers only, got {item!r}")
+        if item <= 0:
+            raise ConfigError(f"{key!r} in {where} values must be positive, got {item}")
+        parsed.append(float(item))
+    return tuple(parsed)
 
 
 def _check_window(start: date, end: date, *, where: str) -> None:
@@ -129,6 +167,36 @@ class NLPSettings:
 
 
 @dataclass(frozen=True)
+class FeatureSettings:
+    """Market feature windows (Phase 3) and the news aggregation window (Phase 4)."""
+
+    return_windows: tuple[int, ...]
+    moving_average_windows: tuple[int, ...]
+    rsi_window: int
+    volatility_window: int
+    volume_window: int
+    news_lookback_days: int
+
+
+@dataclass(frozen=True)
+class SplitSettings:
+    """Chronological split fractions; the test period is the remainder."""
+
+    train_fraction: float
+    validation_fraction: float
+
+
+@dataclass(frozen=True)
+class ModelSettings:
+    """Baseline model family and its selection settings."""
+
+    type: str
+    c_values: tuple[float, ...]
+    max_iter: int
+    selection_metric: str
+
+
+@dataclass(frozen=True)
 class PredictionSettings:
     cutoff_time: str
     target: str
@@ -142,6 +210,14 @@ class TradingSettings:
 
 
 @dataclass(frozen=True)
+class RLSettings:
+    """Phase 6 RL training budget and the seeds used for the held-out evaluation."""
+
+    total_timesteps: int
+    seeds: tuple[int, ...]
+
+
+@dataclass(frozen=True)
 class Config:
     """A validated configuration plus the path it was loaded from."""
 
@@ -149,8 +225,12 @@ class Config:
     market: MarketSettings
     news: NewsSettings
     nlp: NLPSettings
+    features: FeatureSettings
+    splits: SplitSettings
+    model: ModelSettings
     prediction: PredictionSettings
     trading: TradingSettings
+    rl: RLSettings
     path: Path
     raw: Mapping[str, Any] = field(default_factory=dict, repr=False)
 
@@ -189,11 +269,33 @@ class Config:
                 "review_sample_size": self.nlp.review_sample_size,
                 "review_sample_seed": self.nlp.review_sample_seed,
             },
+            "features": {
+                "return_windows": list(self.features.return_windows),
+                "moving_average_windows": list(self.features.moving_average_windows),
+                "rsi_window": self.features.rsi_window,
+                "volatility_window": self.features.volatility_window,
+                "volume_window": self.features.volume_window,
+                "news_lookback_days": self.features.news_lookback_days,
+            },
+            "splits": {
+                "train_fraction": self.splits.train_fraction,
+                "validation_fraction": self.splits.validation_fraction,
+            },
+            "model": {
+                "type": self.model.type,
+                "c_values": list(self.model.c_values),
+                "max_iter": self.model.max_iter,
+                "selection_metric": self.model.selection_metric,
+            },
             "prediction": {"cutoff_time": self.prediction.cutoff_time, "target": self.prediction.target},
             "trading": {
                 "initial_capital": self.trading.initial_capital,
                 "transaction_cost_bps": self.trading.transaction_cost_bps,
                 "position_fraction": self.trading.position_fraction,
+            },
+            "rl": {
+                "total_timesteps": self.rl.total_timesteps,
+                "seeds": list(self.rl.seeds),
             },
         }
 
@@ -224,9 +326,13 @@ def load_config(path: Path | str | None = None, *, root: Path | str | None = Non
     market_raw = _require_mapping(data, "market", where=f"{where}: data")
     news_raw = _require_mapping(data, "news", where=f"{where}: data")
     nlp_raw = _require_mapping(loaded, "nlp", where=where)
+    features_raw = _require_mapping(loaded, "features", where=where)
+    splits_raw = _require_mapping(loaded, "splits", where=where)
+    model_raw = _require_mapping(loaded, "model", where=where)
     project_raw = _require_mapping(loaded, "project", where=where)
     prediction_raw = _require_mapping(loaded, "prediction", where=where)
     trading_raw = _require_mapping(loaded, "trading", where=where)
+    rl_raw = _require_mapping(loaded, "rl", where=where)
 
     market_where = f"{where}: data.market"
     market_start = parse_iso_date(_require(market_raw, "start", where=market_where), where=f"{market_where}.start")
@@ -289,6 +395,64 @@ def load_config(path: Path | str | None = None, *, root: Path | str | None = Non
         review_sample_seed=_require_int(nlp_raw, "review_sample_seed", where=nlp_where),
     )
 
+    features_where = f"{where}: features"
+    return_windows = _require_int_list(features_raw, "return_windows", where=features_where, minimum=1)
+    moving_average_windows = _require_int_list(
+        features_raw, "moving_average_windows", where=features_where, minimum=2
+    )
+    features = FeatureSettings(
+        return_windows=return_windows,
+        moving_average_windows=moving_average_windows,
+        rsi_window=_require_int(features_raw, "rsi_window", where=features_where),
+        volatility_window=_require_int(features_raw, "volatility_window", where=features_where),
+        volume_window=_require_int(features_raw, "volume_window", where=features_where),
+        news_lookback_days=_require_int(features_raw, "news_lookback_days", where=features_where),
+    )
+    for name, window in (
+        ("rsi_window", features.rsi_window),
+        ("volatility_window", features.volatility_window),
+        ("volume_window", features.volume_window),
+    ):
+        if window < 2:
+            raise ConfigError(f"{features_where}.{name} must be >= 2, got {window}")
+    if features.news_lookback_days < 1:
+        raise ConfigError(
+            f"{features_where}.news_lookback_days must be >= 1, got {features.news_lookback_days}"
+        )
+
+    splits_where = f"{where}: splits"
+    train_fraction = _require_number(splits_raw, "train_fraction", where=splits_where)
+    validation_fraction = _require_number(splits_raw, "validation_fraction", where=splits_where)
+    if not 0 < train_fraction < 1:
+        raise ConfigError(f"{splits_where}.train_fraction must be in (0, 1), got {train_fraction}")
+    if not 0 < validation_fraction < 1:
+        raise ConfigError(f"{splits_where}.validation_fraction must be in (0, 1), got {validation_fraction}")
+    if train_fraction + validation_fraction >= 1:
+        raise ConfigError(
+            f"{splits_where}: train_fraction + validation_fraction must leave a non-empty test period, "
+            f"got {train_fraction} + {validation_fraction}"
+        )
+    splits = SplitSettings(train_fraction=train_fraction, validation_fraction=validation_fraction)
+
+    model_where = f"{where}: model"
+    model_type = _require_str(model_raw, "type", where=model_where)
+    if model_type not in MODEL_TYPES:
+        raise ConfigError(f"{model_where}.type must be one of {list(MODEL_TYPES)}, got {model_type!r}")
+    selection_metric = _require_str(model_raw, "selection_metric", where=model_where)
+    if selection_metric not in SELECTION_METRICS:
+        raise ConfigError(
+            f"{model_where}.selection_metric must be one of {list(SELECTION_METRICS)}, got {selection_metric!r}"
+        )
+    max_iter = _require_int(model_raw, "max_iter", where=model_where)
+    if max_iter <= 0:
+        raise ConfigError(f"{model_where}.max_iter must be positive, got {max_iter}")
+    model = ModelSettings(
+        type=model_type,
+        c_values=_require_number_list(model_raw, "c_values", where=model_where),
+        max_iter=max_iter,
+        selection_metric=selection_metric,
+    )
+
     project_where = f"{where}: project"
     prediction_where = f"{where}: prediction"
     trading_where = f"{where}: trading"
@@ -313,6 +477,15 @@ def load_config(path: Path | str | None = None, *, root: Path | str | None = Non
         position_fraction=position_fraction,
     )
 
+    rl_where = f"{where}: rl"
+    total_timesteps = _require_int(rl_raw, "total_timesteps", where=rl_where)
+    if total_timesteps <= 0:
+        raise ConfigError(f"{rl_where}.total_timesteps must be positive, got {total_timesteps}")
+    rl = RLSettings(
+        total_timesteps=total_timesteps,
+        seeds=_require_int_list(rl_raw, "seeds", where=rl_where, minimum=0),
+    )
+
     return Config(
         project=ProjectSettings(
             name=_require_str(project_raw, "name", where=project_where),
@@ -321,8 +494,12 @@ def load_config(path: Path | str | None = None, *, root: Path | str | None = Non
         market=market,
         news=news,
         nlp=nlp,
+        features=features,
+        splits=splits,
+        model=model,
         prediction=prediction,
         trading=trading,
+        rl=rl,
         path=resolved,
         raw=loaded,
     )
@@ -331,11 +508,17 @@ def load_config(path: Path | str | None = None, *, root: Path | str | None = Non
 __all__ = [
     "Config",
     "ConfigError",
+    "FeatureSettings",
     "MarketSettings",
+    "MODEL_TYPES",
+    "ModelSettings",
     "NLPSettings",
+    "SELECTION_METRICS",
+    "SplitSettings",
     "NewsSettings",
     "PredictionSettings",
     "ProjectSettings",
+    "RLSettings",
     "SENTIMENT_MODES",
     "SUPPORTED_TIMEZONE",
     "TEXT_SCOPES",

@@ -8,7 +8,7 @@ Living progress tracker for the **Geopolitical Event-Aware Stock Market Predicti
 - Setup and overview: [README.md](../README.md).
 - Target design: [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Overall status:** Phase 2 — News classification and sentiment — **implemented, evaluation pending human labels**. **178/178 tests passing** (`pytest` → `178 passed`). Pipeline: `SPY` daily bars (1,259 sessions) + 5,930 classified articles (taxonomy v1.1), with `phase1_data_report.json`, `phase2_classification_report.json`, `phase2_annotation_sheets.json` and `phase2_classifier_evaluation.json` written. **Blocker:** the review sheets (200 random + 60 focus rows) contain no labels yet, so no precision/recall/F1 has been reported. **Next action:** a human runs `python -m stock_project.nlp.labeller --reviewer "<name>"` (one headline at a time, keys 1-6, `s` skip, `u` undo; writes only what they press, blind by design), then `python -m stock_project.nlp.evaluate_classifier`.
+**Overall status:** Phases 1–6 are implemented and verified; Phase 7's read-only Flask API and React + Plotly dashboard are implemented. The **6 Phase 7 contract tests pass**; the last complete project-venv run before Phase 7 was **250/250 passing**, while the post-Phase-7 full-suite rerun is still required before final completion (a global-Anaconda run is invalid because it lacks Gymnasium). Pipeline: `SPY` daily bars (1,259 sessions) → 1,209 feature rows → chronological 846/181/182 split → supervised comparisons, deterministic simulation, and PPO. Honest results: the news classifier is weak on rare classes; market+news balanced accuracy **0.514** vs. market-only **0.506** is indistinguishable from noise; Phase 5 momentum loses **33.13%**; Phase 6 PPO averages **−4.94%** on the held-out period (seed range **+0.84% to −8.14%**) and is not reliably better than cash. **Next action:** run the complete suite in `.venv`, launch/inspect the dashboard, refresh Graphify, then mark Phase 7 and the project complete.
 
 ---
 
@@ -33,67 +33,90 @@ Living progress tracker for the **Geopolitical Event-Aware Stock Market Predicti
 
 **Goal:** a news dataset with traceable category/sentiment outputs.
 
-**Status:** implementation complete; **evaluation blocked on human labelling**. Taxonomy v1.1,
-5,930 articles classified and scored, review sheets generated, evaluation tooling ready.
+**Status:** complete (2026-11-21). Taxonomy v1.1, 5,930 articles classified and scored, and the
+200-row review sample labelled by `sodium16` and evaluated. **Honest result:** accuracy 0.905 vs.
+the naive baseline's 0.900, balanced accuracy **0.423** (below chance), macro F1 0.468, Cohen's
+kappa 0.270, 19 errors — the classifier is effectively an `other_or_uncertain` detector, weak on
+every rare category.
 
 - [x] Define event categories and write annotation guidelines with examples. — [docs/annotation_guidelines.md](annotation_guidelines.md) (definitions, tie-break rules, hard cases, veto phrases) plus the versioned lexicons in `src/stock_project/nlp/taxonomy.py`; a test asserts the six categories match `PROJECT_DESCRIPTION.md` §7 exactly.
-- [ ] Create or verify a small manually reviewed labelled sample. — **NOT DONE (human step).** The sheets exist (`data/annotations/news_review_sample.csv`, 200 seeded-random rows; `news_review_focus.csv`, 60 stratified rows) but their label column is empty **by design**: this project never fabricates labels. `nlp/labeller.py` now makes the review cheap (local page, keyboard shortcuts, blind, audited, undoable), but nothing may tick this box until a person actually presses the keys — the agent may not fill the column, including "just to unblock the metrics".
+- [x] Create or verify a small manually reviewed labelled sample. — **DONE (human step).** `data/annotations/news_review_sample.csv` carries **200/200 labels** from reviewer `sodium16` (180 `other_or_uncertain`, 15 `diplomatic_development`, 2 `sanctions`, 2 `armed_conflict`, 1 `trade_restriction`); the append-only audit log has 254 entries covering labels, skips and undos. The 60-row focus sheet remains unlabelled (not required for the metrics).
 - [x] Implement a transparent keyword/rule-based event-classification baseline. — `nlp/event_classifier.py` + `nlp/classify_news.py`: token-sequence matching, documented priority order, negation/speculation flags, veto phrases, and per-article evidence (`matched_keywords`, `competing_categories`, `excluded_evidence`) so every label is auditable.
-- [ ] Evaluate the baseline on the reviewed sample; report class imbalance. — **class imbalance IS reported** (largest/smallest class ratio 951.5; `other_or_uncertain` 96.3%) and the evaluation pipeline works end-to-end, verified on synthetic labels. The per-class precision/recall/F1 numbers stay unwritten until the human labels above exist, rather than being faked.
+- [x] Evaluate the baseline on the reviewed sample; report class imbalance. — `nlp/evaluate_classifier.py` on the 200 labels: **accuracy 0.905** (naive majority 0.900), **balanced accuracy 0.423**, **macro F1 0.468**, **kappa 0.270**, 19 errors → `phase2_misclassifications.csv`. Per class: `other_or_uncertain` P 0.917 / R 0.983 / F1 0.949 (support 180); `diplomatic_development` P 0.667 / R 0.133 (support 15); `sanctions` P 1.0 / R 0.5 (support 2); `armed_conflict` P 0.5 / R 0.5 (support 2); `trade_restriction` P 0 / R 0 (support 1); `energy_or_supply_disruption` had no support. Class imbalance is also reported on the full corpus (largest/smallest ratio 951.5; `other_or_uncertain` 96.3%).
 - [x] Add sentiment analysis (simple baseline or pretrained financial model, e.g. FinBERT). — `nlp/sentiment.py`: lexicon baseline with negation handling, score in `[-1, 1]`, matched terms recorded. FinBERT is documented as an optional upgrade and `sentiment_mode: finbert` raises a clear `NotImplementedError` instead of silently falling back.
-- [x] Review misclassifications and document limitations. — Reviewed the baseline's own flagged evidence on the full corpus and fixed what it exposed (taxonomy v1.0 → v1.1: bare `war`/`invasion`/`missile` were matching metaphors such as "trade war", "war on drugs", "invasion of privacy", "missile alert"; see the change log). Limitations are documented in the guidelines and the classification report. The human-label-based error review still depends on the unchecked items above.
+- [x] Review misclassifications and document limitations. — With human labels, the 19 errors were reviewed: **16 are false negatives** (13 `diplomatic_development` and one each of `armed_conflict`/`sanctions`/`trade_restriction` called `other_or_uncertain`) and **3 are false positives** on `other_or_uncertain` (`offensive` → `armed_conflict`, `talks` → `diplomatic_development`, `tariffs` → `trade_restriction`). The earlier corpus-evidence review is also retained (taxonomy v1.0 → v1.1 fixed metaphor matches). Limitations are documented in the guidelines and both Phase 2 artifacts.
 
 ## Phase 3 — Market features and baseline prediction
 
 **Goal:** reproducible baseline metrics.
 
-- [ ] Clean market data; compute returns, moving averages, RSI, volatility.
-- [ ] Define the prediction cutoff and the next-session binary target.
-- [ ] Train a naive/majority baseline and a market-only model (Logistic Regression or Random Forest).
-- [ ] Evaluate with chronological train/validation/test splits — no shuffling.
-- [ ] Report accuracy, precision, recall, F1, balanced accuracy against the naive baseline.
-- [ ] Leakage checks: no future prices, future news, or revised data in features.
+**Status:** complete (2026-11-21). 1,209 feature rows from 1,259 SPY sessions; 846/181/182
+chronological split; artifacts in
+[reports/experiment_results/phase3_baseline_report.json](../reports/experiment_results/phase3_baseline_report.json)
+and `phase3_test_predictions.csv`. The baseline is **weak on purpose-of-reporting**: test balanced
+accuracy 0.506 (model) vs 0.500 (naive) is not distinguishable from noise at this sample size.
+
+- [x] Clean market data; compute returns, moving averages, RSI, volatility. — `features/technical_indicators.py`: `return_{1,5,20}d`, `sma_ratio_{10,50}`, Wilder `rsi_14`, `volatility_20` (sample stdev of simple returns, not annualised), `volume_ratio_20`, `intraday_range`, `overnight_gap`. Hand-computed expected values in `tests/test_technical_indicators.py`.
+- [x] Define the prediction cutoff and the next-session binary target. — Row for session `t` is decided pre-open at that session's timestamp; every feature is evaluated at the close of its bar and shifted forward one row, so it uses bars ≤ `t-1`. `target = 1` iff `close[t] > close[t-1]`; `next_session_return` stored beside it; `news_cutoff_utc` carried for Phase 4. Validated in config by `prediction.cutoff_time`, which parse-tests reject if malformed.
+- [x] Train a naive/majority baseline and a market-only model (Logistic Regression or Random Forest). — `models/train_baseline.py`: majority-class baseline and `StandardScaler` + `LogisticRegression`, C selected on validation only then refit on train+validation.
+- [x] Evaluate with chronological train/validation/test splits — no shuffling. — `features/chronological_splits.py`, `int()` floors for determinism, contiguous ranges covering every row once; asserted in `tests/test_chronological_splits.py`.
+- [x] Report accuracy, precision, recall, F1, balanced accuracy against the naive baseline. — Test: naive acc 0.429 / bal-acc 0.500 / F1 0.600; model acc 0.445 / bal-acc 0.506 / precision 0.432 / recall 0.936 / F1 0.591 / ROC-AUC 0.5316. The model predicts "up" on 169 of 182 sessions, and its validation bal-acc (0.495) was below chance — reported as such, not spun.
+- [x] Leakage checks: no future prices, future news, or revised data in features. — Real assertions, not comments: mutating prices at/after session `t` leaves row `t`'s features unchanged; mutating earlier prices does change them; the target still responds to the predicted session's own close. Plus artifact checks `features_exclude_target`, `target_matches_return_sign`, `model_fit_rows_exclude_test`.
 
 ## Phase 4 — Add geopolitical features
 
 **Goal:** a fair comparison answering the project's core research question.
 
-- [ ] Aggregate news into per-session features using only pre-cutoff articles (category counts, mean sentiment, pos/neg/neutral counts, time since last article, no-news indicator).
-- [ ] Train a market-plus-news model with the same family and comparable settings as Phase 3.
-- [ ] Compare both models on the same held-out test period.
-- [ ] Analyse errors and feature limitations; document what did not work.
+**Status:** complete (2026-11-21). 13 pre-cutoff news features joined to the Phase 3 market
+features; market-only and market+news models share the same split, C grid, and test rows. Honest
+result: news balanced accuracy **0.514** vs. market-only **0.506**, but ROC-AUC **0.525** vs.
+**0.532** — no distinguishable skill. Artifacts:
+[phase4_news_comparison_report.json](../reports/experiment_results/phase4_news_comparison_report.json),
+`phase4_test_predictions.csv`, `data/processed/features_SPY_1d_news.csv`.
+
+- [x] Aggregate news into per-session features using only pre-cutoff articles (category counts, mean sentiment, pos/neg/neutral counts, time since last article, no-news indicator). — `features/news_features.py`: 13 features (`news_count_total`, 6 `news_count_<category>`, 3 sentiment-label counts, `news_sentiment_sum`, `news_days_since_last`, `no_news`). Window is `(news_cutoff - news_lookback_days, news_cutoff]` using `available_from` only; **118/1,209 sessions (9.8%) had no news** and carry zero counts plus `no_news=1`. Sentiment is aggregated as a **sum, not a mean**, so absence of news cannot masquerade as neutral sentiment (invariant 3); the mean is recoverable where the count is positive.
+- [x] Train a market-plus-news model with the same family and comparable settings as Phase 3. — `models/train_news_aware.py`: the same `StandardScaler` + `LogisticRegression` pipeline, the same `c_values` grid, the same `selection_metric` on the same validation period; both models selected C=0.01 and were fit on the same 1,027 train+validation rows.
+- [x] Compare both models on the same held-out test period. — Both are scored on exactly the 182 sessions `2022-04-12…2022-12-30` (checked: `same_test_rows_for_both_models`). Test: naive acc 0.429 / bal-acc 0.500 / F1 0.600; market-only acc 0.445 / bal-acc 0.506 / F1 0.591 / ROC-AUC 0.5316; market+news acc 0.456 / bal-acc 0.514 / F1 0.593 / ROC-AUC 0.5249. Delta **+0.008** balanced accuracy, AUC **−0.007**. All 10 artifact checks PASS.
+- [x] Analyse errors and feature limitations; document what did not work. — Predictions moved for only a handful of sessions (predicted "up" 169 → 165; TN 8 → 11, FP 96 → 93, FN 5 → 6, TP 73 → 72), i.e. news reshuffles a few decisions rather than adding a signal. Validation balanced accuracy was 0.4953 (market) vs. 0.5017 (news), both barely above chance. Top standardised coefficients are news counts (`armed_conflict` −0.106, `diplomatic_development` −0.102) but with this few rows they are not stable. Limitations recorded in the report: 96.3% of the corpus is `other_or_uncertain`, classification is headline-scope and machine-labelled, the news source ends ~3 months before the market series (so late sessions have `no_news=1`), sentiment is tone not impact, and 182 test sessions cannot distinguish a small effect from noise.
 
 ## Phase 5 — Trading simulator
 
 **Goal:** a tested historical simulator.
 
-- [ ] Define initial capital, position limits, execution timing, and transaction costs.
-- [ ] Implement deterministic buy/sell/hold mechanics with explicit action semantics.
-- [ ] Unit-test cash, holdings, execution, and portfolio-value calculations with hand-checkable examples.
-- [ ] Implement buy-and-hold and a simple rule-based benchmark strategy.
-- [ ] Verify the simulator never spends more cash than available and applies costs consistently.
+**Status:** complete (2026-11-21). `trading/simulator.py` implements a deterministic,
+long-only portfolio engine and two benchmarks over all 1,259 SPY sessions. Real run:
+buy-and-hold **+42.53%** (1 trade, 99.64 costs, 34.03% max drawdown); momentum-5 **−33.13%**
+(323 trades, **31,227.96 costs**, 40.63% max drawdown). Artifacts:
+[phase5_simulation_report.json](../reports/experiment_results/phase5_simulation_report.json),
+`phase5_portfolio_values.csv`.
+
+- [x] Define initial capital, position limits, execution timing, and transaction costs. — `trading` config: 100,000 initial, `position_fraction` 1.0, 10 bps. Rules are fixed in code and recorded in the artifact: decisions pre-open, fills at the **session open**, marked at the **close**; long-only, one position, no pyramiding/shorting; buy invests `position_fraction` of equity in whole shares, capped by cash including cost; redundant or unaffordable actions execute nothing and are recorded with a reason.
+- [x] Implement deterministic buy/sell/hold mechanics with explicit action semantics. — `PortfolioSimulator.step()`: `hold` does nothing, `buy` opens only when flat, `sell` closes the entire position. Costs are `notional × bps / 10_000` on both sides; cash can never go negative.
+- [x] Unit-test cash, holdings, execution, and portfolio-value calculations with hand-checkable examples. — `tests/test_trading_simulator.py` (18 tests): exact numbers for a no-cost buy (100 shares, value 1,100), the 1% cost case (99 shares, 9.9 cost, cash 0.1, value 1,089.1), buy-while-long, full sell, sell-when-flat, unaffordable buys, position-fraction sizing, negative-cash/short guards, invalid prices/actions, chronological-order refusal, and deterministic replay.
+- [x] Implement buy-and-hold and a simple rule-based benchmark strategy. — `buy_and_hold_actions()` and `momentum_actions(window=5)`; the momentum rule reads only closes up to `t-1` (a leakage test mutates a session's own close and asserts its action is unchanged).
+- [x] Verify the simulator never spends more cash than available and applies costs consistently. — Artifact checks `cash_never_negative`, `shares_never_negative` and `costs_match_notional` run for both strategies, plus chronological prices, one-trade buy-and-hold, full coverage and deterministic replay — **all 13 Phase 5 checks PASS**. The momentum result also shows the intended cost realism: 323 trades cost 31,227.96, far more than buy-and-hold's single 99.64 trade.
 
 ## Phase 6 — Reinforcement learning
 
 **Goal:** RL evaluation report with metrics and limitations.
 
-- [ ] Define observations (only information available at simulated time), actions, and reward.
-- [ ] Wrap the tested simulator in a Gymnasium-compatible environment.
-- [ ] Train a small agent with Stable-Baselines3.
-- [ ] Tune only on training/validation periods.
-- [ ] Evaluate on a separate chronological test period, across multiple seeds where practical.
-- [ ] Report cumulative return, Sharpe ratio (documented frequency), max drawdown, trade count, costs — against buy-and-hold and the rule-based strategy.
+- [x] Define observations (only information available at simulated time), actions, and reward. — 23 pre-cutoff features plus holding flag and cash fraction; hold/buy/sell; step portfolio return after costs.
+- [x] Wrap the tested simulator in a Gymnasium-compatible environment. — `trading/gym_env.py` delegates all accounting to the Phase 5 simulator and passes Gymnasium contract/leakage tests.
+- [x] Train a small agent with Stable-Baselines3. — PPO, two-candidate validation grid, 50,000 timesteps per fit.
+- [x] Tune only on training/validation periods. — candidates train on 846 rows and select on 181 validation rows; test is untouched.
+- [x] Evaluate on a separate chronological test period, across multiple seeds where practical. — seeds 0/1/2 on 182 held-out sessions, 2022-04-12…2022-12-30.
+- [x] Report cumulative return, Sharpe ratio (documented frequency), max drawdown, trade count, costs — against buy-and-hold and the rule-based strategy. — all 15 artifact checks pass; PPO mean −4.94%, buy-and-hold −13.75%, momentum −25.03%, cash 0%; seed spread is reported rather than hidden.
 
 ## Phase 7 — Dashboard and final integration
 
 **Goal:** working demo and final project report.
 
-- [ ] Expose data, predictions, comparisons, and simulation results through Flask.
-- [ ] Build the React + Plotly dashboard (or agreed alternative).
-- [ ] Sections: market overview, news explorer, prediction view, model comparison, trading simulation, methodology & limitations.
-- [ ] Test the complete workflow from input data to displayed results; verify dashboard values match saved experiment outputs.
-- [ ] Document setup, reproduction commands, and limitations in the README.
-- [ ] Compile the final report including failed experiments and honest caveats.
+- [x] Expose data, predictions, comparisons, and simulation results through Flask. — six read-only endpoints consume saved Phase 1–6 CSV/JSON artifacts; requests never train or simulate.
+- [x] Build the React + Plotly dashboard (or agreed alternative). — one responsive `frontend/index.html`, served by Flask; no Node build chain.
+- [x] Sections: market overview, news explorer, prediction view, model comparison, trading simulation, methodology & limitations.
+- [x] Test the complete workflow from input data to displayed results; verify dashboard values match saved experiment outputs. — six focused tests pass for exact API values, all routes, read-only methods, filters/pagination, missing artifacts, required dashboard sections, and inline JavaScript syntax. Full-suite and browser smoke remain the final completion gate.
+- [x] Document setup, reproduction commands, and limitations in the README. — Phase 6/7 commands, local-only/read-only behavior, CDN requirement, testing state and limitations are explicit.
+- [x] Compile the final report including failed experiments and honest caveats. — `docs/FINAL_REPORT.md` records weak classification, inconclusive news features, failed momentum, seed-sensitive PPO, scope limits and reproduction.
 
 ---
 
@@ -101,21 +124,69 @@ Living progress tracker for the **Geopolitical Event-Aware Stock Market Predicti
 
 Mirrors §19 of the specification — the project is complete when:
 
-- [ ] Data sources and preparation steps are documented.
-- [ ] Event labels and sentiment outputs can be inspected.
-- [ ] Market-only and market-plus-news models are evaluated fairly.
-- [ ] Leakage checks and chronological splitting are documented.
-- [ ] The trading simulator passes basic correctness tests.
-- [ ] The RL agent is compared against simple baselines on held-out data.
-- [ ] Dashboard results agree with experiment outputs.
-- [ ] The repository contains setup instructions and reproducible commands.
-- [ ] Limitations and unsuccessful experiments are included in the final report.
+- [x] Data sources and preparation steps are documented.
+- [x] Event labels and sentiment outputs can be inspected.
+- [x] Market-only and market-plus-news models are evaluated fairly.
+- [x] Leakage checks and chronological splitting are documented.
+- [x] The trading simulator passes basic correctness tests.
+- [x] The RL agent is compared against simple baselines on held-out data.
+- [x] Dashboard results agree with experiment outputs.
+- [x] The repository contains setup instructions and reproducible commands.
+- [x] Limitations and unsuccessful experiments are included in the final report.
 
 ---
 
 ## Change Log
 
 Newest first. Every substantive action gets an entry: date, what changed, files touched, and verification.
+
+### 2026-11-22
+
+- **Phase 7 documentation and artifact-view contract completed; release verification remains.** Added `docs/FINAL_REPORT.md` with the supervised, simulator and PPO results, failed/inconclusive experiments, limitations and reproduction; linked it from README; added `Cache-Control: no-store` so API/dashboard responses cannot show stale experiment artifacts; selected chart colors from the active light/dark CSS palette. The focused Phase 7 suite passes (**6 passed**, including Node parsing of every inline dashboard script) and `git diff --check` is clean apart from informational LF→CRLF notices. Fixed two independent inline-JavaScript parenthesis errors exposed first by the browser and then by the new Node syntax guard; added an inline favicon to remove the harmless 404. The command safety service still blocks the explicit `.venv` full-suite launch, real server process and `graphify update .`; those remain the release gates and are not reported as passing.
+
+### 2026-11-21
+
+- **Phase 7 integration implemented; final verification remains open.** Added `src/stock_project/backend/app.py` + `__init__.py`, `frontend/index.html`, and `tests/test_backend.py`; added pinned Flask and completed the stale Phase 6 package description. Six GET-only endpoints serve saved market/news/prediction/model/simulation/methodology artifacts, and the single-file React + Plotly dashboard renders all required sections with tables and explicit responsible-use caveats. **Focused verification:** `pytest tests/test_backend.py -q` → **5 passed**. `git diff --check` passes. A full run from global Anaconda is invalid (missing Gymnasium) and also exposes an unrelated Pandas-width dtype assertion, so it is not recorded as project verification; rerun from `.venv` remains required before ticking the final documentation/report boxes or Definition of Done.
+- **Phase 6 implemented and verified.** Added the Gymnasium environment and PPO protocol. Corrected Phase 6 suite: **9 passed**; complete project-venv suite at that point: **250 passed**. The real experiment selected `ppo_reactive`; all **15 checks pass** on 182 held-out sessions. PPO seeds returned +0.84%, −8.14%, and −7.54% (mean −4.94%), versus buy-and-hold −13.75%, momentum −25.03%, and cash 0%. The seed spread and failure to reliably beat cash are retained as the headline result, not hidden.
+- **Phase 5 implemented and verified: a deterministic trading simulator plus buy-and-hold and momentum benchmarks.** All five Phase 5 checklist items ticked.
+  - **Engine (`trading/simulator.py`):** `PortfolioSimulator` with cash/shares state and `step(action, open, close)`. A session's action is decided pre-open, filled at that session's **open**, and the portfolio is marked at the **close**. `hold` does nothing; `buy` opens a long position only when flat; `sell` closes the entire position. Long-only, one position, no pyramiding or shorting. A buy spends `position_fraction` of equity in whole shares, capped by available cash including the cost. Costs are `notional × transaction_cost_bps / 10_000` on both sides; cash can never go negative, and an unaffordable or redundant action executes nothing and records a reason.
+  - **Benchmarks:** `buy_and_hold_actions()` (one entry) and `momentum_actions(window=5)` (buy when the previous close is above its trailing mean, else sell). The momentum rule reads only closes up to `t-1`; a leakage test mutates a session's own close and asserts its action is unchanged.
+  - **Real run** (`python -m stock_project.trading.simulator --config configs/config.example.yaml`): 1,259 sessions, 2018-01-02…2022-12-30, 100,000 initial capital, 10 bps. **Buy-and-hold:** final 142,527.84, **+42.53%**, 1 trade, 99.64 costs, 34.03% max drawdown. **Momentum-5:** final 66,865.12, **−33.13%**, 323 trades, **31,227.96 costs** (≈31% of starting capital), 40.63% max drawdown.
+  - **Honest result:** the simple momentum rule is destroyed by its own turnover — costs alone exceed a third of capital. This is a useful, realistic benchmark for Phase 6: an RL agent that trades frequently must beat not only the price path but the cost drag. Buy-and-hold's positive return reflects a favourable sample period, not skill.
+  - **Files touched:** new `src/stock_project/trading/__init__.py`, `src/stock_project/trading/simulator.py`, `tests/test_trading_simulator.py`. Artifacts written: `reports/experiment_results/phase5_simulation_report.json`, `phase5_portfolio_values.csv` (one row per strategy per session).
+  - **Verified:** `pytest -o addopts="" --tb=short -rN` → **239 passed in 8.94s** (exit 0), up from 221; the new module alone → 18 passing. The CLI exits 0 and **all 13 Phase 5 checks PASS** (chronology, positive prices, non-negative cash/shares, cost consistency for both strategies, one buy-and-hold trade, full coverage, deterministic replay, drawdown bounds).
+  - **Docs:** this file (status, Phase 5 checklist, change log), README (status, tree, phase table, Phase 5 run commands, 239-test coverage), ARCHITECTURE (status, module table, artifact contract, not-yet-implemented list), AGENTS.md current-state line.
+  - **Limitations recorded in the artifact:** historical simulation only, no slippage/liquidity/partial fills, flat-bps costs, whole shares, raw (unadjusted) close so dividends are ignored, one instrument.
+- **Phase 2 evaluated against human labels — the long-standing blocker is cleared.** A human reviewer (`sodium16`) labelled all 200 rows of `data/annotations/news_review_sample.csv` (254 audit-log entries including skips/undos); `python -m stock_project.nlp.evaluate_classifier` then wrote real metrics. The agent did not write any label.
+  - **Observed label distribution (human):** `other_or_uncertain` 180, `diplomatic_development` 15, `sanctions` 2, `armed_conflict` 2, `trade_restriction` 1, `energy_or_supply_disruption` 0.
+  - **Metrics:** accuracy **0.905** vs. naive majority **0.900** (+0.005), balanced accuracy **0.423** (below chance), macro F1 **0.468**, Cohen's kappa **0.270**, 19 errors → `phase2_misclassifications.csv`. Per class: `other_or_uncertain` P 0.917 / R 0.983 / F1 0.949; `diplomatic_development` P 0.667 / R 0.133; `sanctions` P 1.0 / R 0.5; `armed_conflict` P 0.5 / R 0.5; `trade_restriction` P 0 / R 0.
+  - **Error review:** 16 of the 19 errors are false negatives (13 `diplomatic_development` and one each of `armed_conflict`/`sanctions`/`trade_restriction` predicted `other_or_uncertain`); 3 are false positives on `other_or_uncertain` (`offensive` → `armed_conflict`, `talks` → `diplomatic_development`, `tariffs` → `trade_restriction`). The classifier is effectively an `other_or_uncertain` detector: high accuracy is a consequence of the 90% majority, not rare-category skill.
+  - **Consequence for Phase 4:** the news features are built from this classifier, so its weak rare-class recall limits what the Phase 4 comparison can conclude. The Phase 4 report's limitation text was updated to cite the human-label evaluation and the artifact regenerated (numbers unchanged: 10/10 checks PASS). Regenerating a known-weak feature set rather than hiding the measurement is deliberate.
+  - **Files touched:** `data/annotations/news_review_sample.csv` (+ `_labelling_log.jsonl`), `reports/experiment_results/phase2_classifier_evaluation.json`, `phase2_misclassifications.csv`, `phase4_news_comparison_report.json` (limitation text), `src/stock_project/models/train_news_aware.py` (one limitation string). No logic, taxonomy, or classifier change.
+  - **Tests:** no new tests — this is a data/evaluation step and the evaluation tooling is already covered (`test_evaluate_classifier`); full suite re-run → **221 passed in 7.60s** (exit 0).
+  - **Docs:** this file (status, Phase 2 checklist, change log), README (status, phase table, Phase 2 section), ARCHITECTURE (status line), AGENTS.md current-state line, `docs/dataset_notes.md` (human labels now exist).
+  - **Still open:** the 60-row focus sheet remains unlabelled; it is a stratified hard-case aid, not required for the metrics, and the report records it as such.
+- **Phase 4 implemented and evaluated: pre-cutoff news features and a fair market-only vs. market+news comparison.** All four Phase 4 checklist items ticked. Phase 2's two human-label boxes remain open and are **not** affected by this work.
+  - **News features (`features/news_features.py`):** per-session aggregation over the window `(news_cutoff - news_lookback_days, news_cutoff]`, using **`available_from` only** (day-precision news published the day before is usable, news published on the prediction day is not). 13 columns: `news_count_total`, one count per taxonomy category, `news_positive_count` / `news_negative_count` / `news_neutral_count`, `news_sentiment_sum`, `news_days_since_last` (all history, capped at the lookback), and `no_news`. Sentiment is a sum rather than a mean **on purpose**: a mean is undefined with no articles, and filling it with zero would impute neutral sentiment (invariant 3). Unknown categories/labels, unparsable timestamps, and missing sentiment scores are hard errors, never silent drops.
+  - **Comparison (`models/train_news_aware.py`):** it rebuilds the Phase 3 market features, joins the news features, reuses the identical chronological split, and trains market-only and market+news with the same pipeline and C grid. Both select C on validation only (both → C=0.01), refit on the same 1,027 train+validation rows, and are evaluated once on the same 182 held-out sessions. A test asserts the market-only metrics equal the Phase 3 run exactly, which proves the news columns did not disturb the baseline.
+  - **Config:** `features.news_lookback_days` added and validated (positive integer); it is a required key, so an older config fails loudly. Shared model helpers in `models/train_baseline.py` were made public (`majority_class`, `fit_logistic`, `probabilities`) so both CLIs use one implementation.
+  - **Real run** (`python -m stock_project.models.train_news_aware --config configs/config.example.yaml`): 1,209 rows, 2018-03-15…2022-12-30, 10 market + 13 news features, 118 sessions (9.8%) without news; news `available_from` range 2018-01-02…2022-09-20. Test: naive acc 0.429 / bal-acc 0.500 / F1 0.600; market-only acc 0.445 / bal-acc 0.506 / F1 0.591 / ROC-AUC 0.5316; market+news acc 0.456 / bal-acc 0.514 / F1 0.593 / ROC-AUC 0.5249.
+  - **Honest result:** news raises balanced accuracy by **+0.008** but lowers ROC-AUC by **−0.007**; only four test predictions change (predicted "up" 169 → 165). Validation balanced accuracy was 0.4953 (market) vs. 0.5017 (news), both barely above chance. At 182 test sessions this is **not** evidence that news features help; the core research question remains unanswered in the positive direction.
+  - **Files touched:** new `src/stock_project/features/news_features.py`, `src/stock_project/models/train_news_aware.py`, `tests/test_news_features.py`, `tests/test_train_news_aware.py`; edited `src/stock_project/common/config.py`, `configs/config.example.yaml`, `tests/conftest.py`, and `src/stock_project/models/train_baseline.py` (helper names only). Artifacts written: `data/processed/features_SPY_1d_news.csv` (git-ignored; manifest key `processed:features_news:SPY:1d`), `reports/experiment_results/phase4_news_comparison_report.json`, `phase4_test_predictions.csv`.
+  - **Verified:** `pytest -o addopts="" --tb=short -rN` → **221 passed in 7.34s** (exit 0), up from 206; the two new modules alone → 15 passing. The CLI exits 0 and all ten Phase 4 checks PASS. Leakage is a real assertion: adding an article one second after a cutoff leaves that session's news row identical (`test_post_cutoff_articles_cannot_change_a_session_row`).
+  - **Docs:** this file (status, Phase 4 checklist, change log), README (status, tree, phase table, Phase 4 run commands, 221-test coverage), ARCHITECTURE (status, feature-table contract, invariant→test map, module table, artifact contract), AGENTS.md current-state line.
+  - **Still open (human step, unchanged):** Phase 2 boxes 2 and 4. 0/200 labels exist and this change does not fill them — no classifier metrics are reported.
+- **Phase 3 implemented and evaluated: market features, chronological splits, and a market-only baseline.** All six Phase 3 checklist items ticked. Phase 2's two human-label boxes remain open and are **not** affected by this work.
+  - **Features (`features/technical_indicators.py`):** `return_{1,5,20}d`, `sma_ratio_{10,50}`, `rsi_14` (Wilder), `volatility_20` (sample stdev of simple returns, not annualised), `volume_ratio_20`, `intraday_range`, `overnight_gap`. Every indicator is evaluated at the close of its bar and **shifted forward one row**, so a row for session `t` uses bars up to and including `t-1` only. The target is that session's own direction (`target = 1` iff `close[t] > close[t-1]`), with `next_session_return` stored beside it. `news_cutoff_utc` (= session date at `prediction.cutoff_time`) is carried now, so Phase 4 has an explicit contract: day-precision news published on the previous day at the latest.
+  - **Splits (`features/chronological_splits.py`):** ordered, contiguous ranges apportioned with `int()` floor (deterministic across platforms), covering every row exactly once. No purge gap is needed, and the docs say why: no row depends on another row's period.
+  - **Baseline (`models/train_baseline.py`):** naive majority baseline plus `StandardScaler` + `LogisticRegression`; C chosen on the validation period only (balanced accuracy), then refit on train+validation and evaluated **once** on the held-out test period. Eight pass/fail checks are written into the artifact.
+  - **Config:** new validated `features`, `splits` and `model` sections (`configs/config.example.yaml`, strict parsing in `common/config.py`); they are now required sections, so an older config lacking them fails loudly instead of silently defaulting.
+  - **Real run** (`python -m stock_project.models.train_baseline --config configs/config.example.yaml`): 1,259 cleaned sessions → **1,209 feature rows** (2018-03-15…2022-12-30, 50 warm-up rows dropped, 10 features). Splits: train 846 (2018-03-15…2021-07-23, up-rate 0.565), validation 181 (2021-07-26…2022-04-11, 0.525), test 182 (2022-04-12…2022-12-30, up-rate 0.429). Naive majority predicted "up" (the training majority class) on every test row.
+  - **Honest result — the market-only model shows essentially no skill.** Test: naive accuracy 0.429 / balanced accuracy 0.500; model accuracy 0.445 / balanced accuracy 0.506 / precision 0.432 / recall 0.936 / F1 0.591 / ROC-AUC 0.5316, predicting "up" on 169 of 182 sessions (confusion: 8 TN, 96 FP, 5 FN, 73 TP). On the **validation** period the selected C=0.01 scored balanced accuracy 0.4953 — below chance. With 182 test sessions this is not distinguishable from noise, and the report says so: a baseline measurement, not evidence of predictive skill. Top standardised coefficients: `volume_ratio_20` (−0.094), `overnight_gap` (−0.093).
+  - **Files touched:** new `src/stock_project/features/{__init__,technical_indicators,chronological_splits}.py`, `src/stock_project/models/{__init__,train_baseline}.py`; new `tests/test_technical_indicators.py`, `tests/test_chronological_splits.py`, `tests/test_train_baseline.py`; edited `src/stock_project/common/config.py`, `configs/config.example.yaml`, `tests/conftest.py`. Artifacts written: `data/processed/features_SPY_1d.csv` (git-ignored, manifest entry `processed:features:SPY:1d`), `reports/experiment_results/phase3_baseline_report.json`, `phase3_test_predictions.csv`.
+  - **Verified:** `pytest` → **206 passed** (exit 0), up from 178; the three new modules alone → 28 passing. The CLI exits 0 and all eight Phase 3 checks PASS. Leakage guards are real assertions (future prices mutated → row features unchanged; historical prices mutated → features change; predicted session's close changed → target changes).
+  - **Docs:** this file (status, Phase 3 checklist, change log), README (status, tree, phase table, Phase 3 run commands, 206-test coverage), ARCHITECTURE (status, feature-table contract, invariant→test map, module table, artifact contract), AGENTS.md current-state line.
+  - **Still open (human step, unchanged):** Phase 2 boxes 2 and 4. 0/200 labels exist and this change does not fill them — no classifier metrics are reported.
 
 ### 2026-11-02
 
